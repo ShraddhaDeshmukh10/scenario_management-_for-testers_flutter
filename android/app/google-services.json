@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "332955303515",
+    "project_id": "senario-dafa4",
+    "storage_bucket": "senario-dafa4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:332955303515:android:f4900e79de6d03a072c97e",
+        "android_client_info": {
+          "package_name": "com.example.scenario_management_tool_for_testers"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBU_aje3cykS5V2OCT-jxnh-mOTds3jXRU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
