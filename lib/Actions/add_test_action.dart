@@ -8,7 +8,7 @@ class AddTestCaseAction extends ReduxAction<AppState> {
   final String bugId;
   final String shortDescription;
   final String testCaseName;
-  final String scenario;
+  final String scenarioId;
   final String comments;
   final String description;
   final String attachment;
@@ -19,7 +19,7 @@ class AddTestCaseAction extends ReduxAction<AppState> {
     required this.bugId,
     required this.shortDescription,
     required this.testCaseName,
-    required this.scenario,
+    required this.scenarioId,
     required this.comments,
     required this.description,
     required this.attachment,
@@ -30,49 +30,54 @@ class AddTestCaseAction extends ReduxAction<AppState> {
   Future<AppState> reduce() async {
     final userEmail =
         FirebaseAuth.instance.currentUser?.email ?? 'unknown_user';
+
     try {
-      DocumentReference docRef =
-          await FirebaseFirestore.instance.collection('testcases').add({
+      // Add the test case to Firestore
+      DocumentReference docRef = await FirebaseFirestore.instance
+          .collection('scenarios')
+          .doc(scenarioId)
+          .collection('testCases')
+          .add({
         'project': project,
         'bugId': bugId,
         'shortDescription': shortDescription,
         'testCaseName': testCaseName,
-        'scenario': scenario,
         'comments': comments,
         'description': description,
-        'attachments': attachment,
+        'attachment': attachment,
         'tags': tag ?? 'Unspecified',
-        'assignedUsers': [userEmail],
-        'createdAt': FieldValue.serverTimestamp(),
         'createdBy': userEmail,
+        'createdAt': FieldValue.serverTimestamp(),
       });
 
-      String docId = docRef.id;
-
-      Map<String, dynamic> newTestCase = {
+      // Add the test case to the state
+      final newTestCase = {
         'project': project,
         'bugId': bugId,
         'shortDescription': shortDescription,
         'testCaseName': testCaseName,
-        'scenario': scenario,
         'comments': comments,
         'description': description,
-        'attachments': attachment,
+        'attachment': attachment,
         'tags': tag ?? 'Unspecified',
-        'assignedUsers': [userEmail],
-        'createdAt': FieldValue.serverTimestamp(),
         'createdBy': userEmail,
-        'docId': docId, // Store the document ID
+        'createdAt': FieldValue.serverTimestamp(),
+        'docId': docRef.id,
       };
 
-      List<Map<String, dynamic>> updatedTestCases = List.from(state.addtestcase)
-        ..add(newTestCase);
+      final updatedScenarios = state.scenarios.map((scenario) {
+        if (scenario['docId'] == scenarioId) {
+          final testCases = List.from(scenario['testCases'] ?? []);
+          testCases.add(newTestCase);
+          return {...scenario, 'testCases': testCases};
+        }
+        return scenario;
+      }).toList();
 
-      return state.copy(addtestcase: updatedTestCases);
+      return state.copy(scenarios: updatedScenarios);
     } catch (e) {
-      // Handle the error by showing a message or logging it
       print("Error adding test case: $e");
-      throw Exception('Failed to add test case');
+      throw Exception("Failed to add test case.");
     }
   }
 }

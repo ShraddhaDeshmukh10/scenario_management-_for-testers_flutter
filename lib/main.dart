@@ -8,9 +8,9 @@ import 'package:scenario_management_tool_for_testers/View/Screens/assignedlist.d
 import 'package:scenario_management_tool_for_testers/View/Screens/commentlist.dart';
 import 'package:scenario_management_tool_for_testers/View/Screens/login.dart';
 import 'package:scenario_management_tool_for_testers/View/Screens/registerscreen.dart';
-import 'package:scenario_management_tool_for_testers/View/Screens/scenariodetail.dart';
 import 'package:scenario_management_tool_for_testers/View/Screens/splash.dart';
 import 'package:scenario_management_tool_for_testers/View/Screens/testcaselist.dart';
+import 'package:scenario_management_tool_for_testers/View/testcasedetail.dart';
 import 'package:scenario_management_tool_for_testers/appstate.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
@@ -78,13 +78,18 @@ class MyApp extends StatelessWidget {
                     roleColor: args['roleColor'] ?? Colors.grey,
                   ),
                 );
-              case Routes.scenariodetail:
+              // case Routes.scenariodetail:
+              //   return MaterialPageRoute(
+              //     builder: (_) => const ScenarioDetailPage(
+              //       scenario:args['sce']
+              //     ),
+              //   );
+              case Routes.testdetail:
                 return MaterialPageRoute(
-                  builder: (_) => ScenarioDetailPage(
-                    scenario: args['scenario'],
-                    roleColor: args['roleColor'],
-                  ),
-                );
+                    builder: (_) => TestCaseDetailPage(
+                          roleColor: args['roleColor'],
+                          testCase: args['testCase'],
+                        ));
               default:
                 return MaterialPageRoute(builder: (_) => const LoginPage());
             }

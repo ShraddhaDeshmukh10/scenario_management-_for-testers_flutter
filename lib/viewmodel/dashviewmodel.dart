@@ -91,7 +91,7 @@ class ViewModel extends Vm {
         bugId: bugId,
         shortDescription: shortDescription,
         testCaseName: testCaseName,
-        scenario: scenario,
+        scenarioId: scenario,
         comments: comments,
         description: description,
         attachment: attachment,

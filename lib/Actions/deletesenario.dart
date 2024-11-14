@@ -14,9 +14,14 @@ class DeleteScenarioAction extends ReduxAction<AppState> {
           .collection('scenarios')
           .doc(docId)
           .delete();
+
+      // Update state after deletion
+      final updatedScenarios =
+          state.scenarios.where((s) => s['docId'] != docId).toList();
+      return state.copy(scenarios: updatedScenarios);
     } catch (e) {
       print("Error deleting scenario: $e");
+      throw Exception("Failed to delete scenario.");
     }
-    return state;
   }
 }
