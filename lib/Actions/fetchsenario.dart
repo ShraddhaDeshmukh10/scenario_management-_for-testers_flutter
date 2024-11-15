@@ -13,7 +13,7 @@ class FetchScenariosAction extends ReduxAction<AppState> {
       final firebaseService = FirebaseService();
       final scenarios = await firebaseService.fetchScenariosFromFirebase();
 
-      // Filter scenarios if a project name is provided
+      //Filter scenarios if a project name is provided
       final filteredScenarios = projectName != null
           ? scenarios
               .where((scenario) => (scenario['projectName'] ?? '')

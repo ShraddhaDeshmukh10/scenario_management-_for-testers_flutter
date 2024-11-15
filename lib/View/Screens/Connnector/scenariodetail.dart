@@ -164,7 +164,6 @@ class ScenarioDetailPage extends StatelessWidget {
                         children: [
                           Text("Test Case Name: ${testCase['name'] ?? 'N/A'}"),
                           Text("Bug ID: ${testCase['bugId'] ?? 'N/A'}"),
-                          Text("Project Name: ${testCase['name'] ?? 'N/A'}"),
                           Text(
                               "Scenario ID: ${testCase['scenarioId'] ?? 'N/A'}"),
                           Text(
@@ -345,8 +344,6 @@ class ScenarioDetailPage extends StatelessWidget {
         TextEditingController(text: testCase['name'] ?? '');
     final TextEditingController bugIdController =
         TextEditingController(text: testCase['bugId'] ?? '');
-    final TextEditingController projectNameController =
-        TextEditingController(text: testCase['projectName'] ?? '');
     final TextEditingController shortDescriptionController =
         TextEditingController(text: testCase['shortDescription'] ?? '');
     final TextEditingController descriptionController =
@@ -375,10 +372,6 @@ class ScenarioDetailPage extends StatelessWidget {
                 TextField(
                   controller: bugIdController,
                   decoration: const InputDecoration(labelText: "Bug ID"),
-                ),
-                TextField(
-                  controller: projectNameController,
-                  decoration: const InputDecoration(labelText: "Project Name"),
                 ),
                 TextField(
                   controller: shortDescriptionController,
@@ -416,7 +409,6 @@ class ScenarioDetailPage extends StatelessWidget {
               onPressed: () async {
                 final newName = nameController.text;
                 final newBugId = bugIdController.text;
-                final newProjectName = projectNameController.text;
                 final newShortDescription = shortDescriptionController.text;
                 final newDescription = descriptionController.text;
                 final newComments = commentsController.text;
@@ -432,7 +424,6 @@ class ScenarioDetailPage extends StatelessWidget {
                         .update({
                       'name': newName,
                       'bugId': newBugId,
-                      'projectName': newProjectName,
                       'shortDescription': newShortDescription,
                       'description': newDescription,
                       'comments': newComments,

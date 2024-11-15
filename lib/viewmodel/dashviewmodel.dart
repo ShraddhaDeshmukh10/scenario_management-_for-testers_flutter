@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:scenario_management_tool_for_testers/Actions/add_test_action.dart';
 import 'package:scenario_management_tool_for_testers/Actions/addcomment.dart';
 import 'package:scenario_management_tool_for_testers/Actions/fetchaction.dart';
+import 'package:scenario_management_tool_for_testers/Actions/filteraction.dart';
 import 'package:scenario_management_tool_for_testers/View/Screens/Connnector/dashboard.dart';
 import 'package:scenario_management_tool_for_testers/appstate.dart';
 import 'package:scenario_management_tool_for_testers/Actions/fetchsenario.dart';
@@ -13,6 +14,9 @@ import 'package:scenario_management_tool_for_testers/main.dart';
 class ViewModel extends Vm {
   final String? designation;
   final List<Map<String, dynamic>> scenarios;
+  List<Map<String, dynamic>> filteredScenarios; // Filtered scenarios
+  final void Function(String filter) filterScenarios;
+  final void Function() clearFilters;
   final Color roleColor;
   final bool isCheckboxEnabled;
   final List<Map<String, dynamic>> assignments;
@@ -44,6 +48,9 @@ class ViewModel extends Vm {
     required this.changeHistory,
     required this.deleteScenario,
     required this.scenarios,
+    required this.filteredScenarios,
+    required this.filterScenarios,
+    required this.clearFilters,
     required this.addComment,
     required this.designation,
     required this.assignments,
@@ -55,7 +62,7 @@ class ViewModel extends Vm {
     required this.fetchScenarios,
     required this.updateScenario,
     required this.searchScenarios,
-  }) : super(equals: [scenarios, comments]);
+  }) : super(equals: [scenarios, comments, filteredScenarios]);
 
   static ViewModel fromStore(Store<AppState> store) {
     String designation = store.state.designation ?? '';
@@ -76,6 +83,13 @@ class ViewModel extends Vm {
       testCases: store.state.testCases,
       changeHistory: store.state.changeHistory,
       scenarios: store.state.scenarios,
+      filteredScenarios: store.state.filteredScenarios ?? store.state.scenarios,
+      filterScenarios: (String filter) {
+        store.dispatch(FilterScenariosAction(filter));
+      },
+      clearFilters: () {
+        store.dispatch(ClearFiltersAction());
+      },
       assignments: store.state.assignments,
       designation: store.state.designation,
       addComment: (content, attachment) =>

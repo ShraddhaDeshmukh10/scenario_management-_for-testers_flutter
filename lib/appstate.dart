@@ -1,5 +1,4 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:scenario_management_tool_for_testers/Actions/load_actions.dart';
 
 class AppState {
   final User? user;
@@ -10,9 +9,11 @@ class AppState {
   final List<Map<String, dynamic>> addtestcase;
   final List<Map<String, dynamic>> testCases;
   final List<Map<String, dynamic>> changeHistory;
+  final List<Map<String, dynamic>>? filteredScenarios;
 
   AppState({
     this.user,
+    this.filteredScenarios,
     this.designation,
     this.scenarios = const [],
     this.assignments = const [],
@@ -25,6 +26,7 @@ class AppState {
   AppState copy({
     User? user,
     String? designation,
+    List<Map<String, dynamic>>? filteredScenarios,
     List<Map<String, dynamic>>? scenarios,
     List<Map<String, dynamic>>? assignments,
     List<Map<String, dynamic>>? addtestcase,
@@ -36,6 +38,7 @@ class AppState {
         user: user,
         designation: designation ?? this.designation,
         scenarios: scenarios ?? this.scenarios,
+        filteredScenarios: filteredScenarios ?? this.filteredScenarios,
         assignments: assignments ?? this.assignments,
         comments: comments ?? this.comments,
         testCases: testCases ?? this.testCases,
@@ -47,6 +50,7 @@ class AppState {
         user: null,
         designation: null,
         scenarios: [],
+        filteredScenarios: null,
         assignments: [],
         changeHistory: [],
         comments: [],
