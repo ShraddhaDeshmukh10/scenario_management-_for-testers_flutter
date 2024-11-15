@@ -15,29 +15,21 @@ class RegisterAction extends ReduxAction<AppState> {
   @override
   Future<AppState?> reduce() async {
     try {
-      // Step 1: Create user in Firebase
       UserCredential userCredential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(email: email, password: password);
-
-      // Step 2: Save user data to Firestore
       await FirebaseFirestore.instance
           .collection('users')
           .doc(userCredential.user!.uid)
           .set({
         'email': email,
-        'role': designation, // Save the correct designation to Firestore
+        'role': designation,
       });
-
-      // Step 3: Save user data to Hive
       var userBox = await Hive.openBox('userBox');
       userBox.put('email', userCredential.user?.email);
-      userBox.put('designation', designation); // Save designation to Hive
-
-      // Step 4: Update state with correct user data (including designation)
+      userBox.put('designation', designation);
       return state.copy(
         user: userCredential.user,
-        designation:
-            designation, // Make sure the correct designation is stored in state
+        designation: designation,
       );
     } catch (e) {
       throw UserException("Failed to register: ${e.toString()}");

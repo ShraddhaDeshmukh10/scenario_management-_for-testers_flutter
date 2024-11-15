@@ -6,6 +6,8 @@ import 'package:scenario_management_tool_for_testers/Actions/load_actions.dart';
 import 'package:scenario_management_tool_for_testers/appstate.dart';
 import 'package:scenario_management_tool_for_testers/main.dart';
 
+///This class takes scenario, roleColor, and designation as inputs, with scenario details rendered across various sections (Scenario Details, Test Cases, Comments, etc.).
+///Conditional rendering using if allows certain actions only for lead tester and developer, such as viewing change history or deleting test cases.
 class ScenarioDetailPage extends StatelessWidget {
   final Map<String, dynamic> scenario;
   final Color roleColor;
@@ -35,7 +37,9 @@ class ScenarioDetailPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                /// this option is only available to developer and lead tester to track the changes in scenario tastcases.
                 if (designation != 'Junior Tester') ...[
+                  // Change history button code
                   TextButton(
                     child: const Text("Click to see change history"),
                     onPressed: () async {
@@ -86,10 +90,7 @@ class ScenarioDetailPage extends StatelessWidget {
                 Divider(),
                 TextButton(
                   onPressed: () {
-                    store.dispatch(AddCommentAction(
-                      scenarioId: scenario['docId'],
-                      commentText: "Your comment text here",
-                    ));
+                    _addComment(context, scenario['docId']);
                   },
                   child: const Text("Add Comment"),
                 ),
@@ -143,7 +144,7 @@ class ScenarioDetailPage extends StatelessWidget {
                     "Created At: ${scenario['createdAt'] != null ? (scenario['createdAt'] as Timestamp).toDate().toString() : 'N/A'}"),
                 Text("Created By: ${scenario['createdByEmail'] ?? 'N/A'}"),
                 const Divider(),
-                // Display Test Cases
+                //  Test Cases...............
                 const Text(
                   'Test Cases',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
@@ -199,6 +200,7 @@ class ScenarioDetailPage extends StatelessWidget {
     );
   }
 
+//// used to fetch testcases from firestore
   Future<List<Map<String, dynamic>>> _fetchTestCases(String scenarioId) async {
     try {
       QuerySnapshot snapshot = await FirebaseFirestore.instance
@@ -216,6 +218,7 @@ class ScenarioDetailPage extends StatelessWidget {
     }
   }
 
+  ///Firestore Query retrieves up to 10 recent changes for the scenario, sorted by timestamp.
   Future<List<Map<String, dynamic>>> _fetchChangeHistory(
       String scenarioId) async {
     try {
@@ -236,6 +239,7 @@ class ScenarioDetailPage extends StatelessWidget {
     }
   }
 
+  ///allows delete option to lead tester
   Future<void> _deleteTestCase(
       String testCaseId, Map<String, dynamic> testCase) async {
     try {
@@ -245,6 +249,7 @@ class ScenarioDetailPage extends StatelessWidget {
           .collection('testCases')
           .doc(testCaseId)
           .delete();
+      store.dispatch(FetchTestCasesAction(scenario['docId']));
     } catch (e) {
       print("Failed to delete test case: $e");
     }
@@ -320,12 +325,10 @@ class ScenarioDetailPage extends StatelessWidget {
                       'createdBy': userEmail,
                       'timestamp': FieldValue.serverTimestamp(),
                     });
+                    store.dispatch(FetchTestCasesAction(scenario['docId']));
                     Navigator.of(context).pop();
                   } catch (e) {
                     print("Error adding comment: $e");
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Failed to add comment")),
-                    );
                   }
                 }
               },
@@ -438,6 +441,7 @@ class ScenarioDetailPage extends StatelessWidget {
                     });
                     await _saveChangeHistory(scenario['docId'],
                         "Updated test case ${testCase['docId']}");
+                    store.dispatch(FetchTestCasesAction(scenario['docId']));
                     Navigator.of(context).pop();
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(

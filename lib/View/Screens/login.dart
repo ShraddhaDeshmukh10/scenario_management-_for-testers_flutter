@@ -6,6 +6,7 @@ import 'package:scenario_management_tool_for_testers/appstate.dart';
 import 'package:scenario_management_tool_for_testers/main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+///class used for login.
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 

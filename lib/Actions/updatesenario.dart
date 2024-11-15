@@ -12,11 +12,9 @@ class UpdateScenarioAction extends ReduxAction<AppState> {
   Future<AppState> reduce() async {
     final firebaseService = FirebaseService();
     await firebaseService.updateScenarioInFirebase(docId, updatedData);
-
-    // Optionally, update the local state after updating Firebase
     final updatedScenarios = state.scenarios.map((scenario) {
       if (scenario['docId'] == docId) {
-        return {...scenario, ...updatedData}; // Update the scenario locally
+        return {...scenario, ...updatedData};
       }
       return scenario;
     }).toList();

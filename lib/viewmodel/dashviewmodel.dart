@@ -24,6 +24,9 @@ class ViewModel extends Vm {
   final void Function(String, Map<String, dynamic>) updateScenario;
   final Function(String?) searchScenarios;
   final void Function(String docId) deleteScenario;
+  final List<Map<String, dynamic>> testCases;
+  final List<Map<String, dynamic>> changeHistory;
+
   final void Function(
       String project,
       String bugId,
@@ -37,6 +40,8 @@ class ViewModel extends Vm {
 
   ViewModel({
     required this.addtestcase,
+    required this.testCases,
+    required this.changeHistory,
     required this.deleteScenario,
     required this.scenarios,
     required this.addComment,
@@ -68,8 +73,10 @@ class ViewModel extends Vm {
     }
 
     return ViewModel(
+      testCases: store.state.testCases,
+      changeHistory: store.state.changeHistory,
       scenarios: store.state.scenarios,
-      assignments: store.state.assignments, // Pass assignments here
+      assignments: store.state.assignments,
       designation: store.state.designation,
       addComment: (content, attachment) =>
           store.dispatch(AddCommentAction(content, attachment)),

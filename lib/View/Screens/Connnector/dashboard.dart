@@ -6,16 +6,20 @@ import 'package:scenario_management_tool_for_testers/Actions/addcomment.dart';
 import 'package:scenario_management_tool_for_testers/Actions/fetchaction.dart';
 import 'package:scenario_management_tool_for_testers/Actions/fetchsenario.dart';
 import 'package:scenario_management_tool_for_testers/Resources/route.dart';
-import 'package:scenario_management_tool_for_testers/View/Screens/scenariodetail.dart';
+import 'package:scenario_management_tool_for_testers/View/Screens/Connnector/scenariodetail.dart';
 import 'package:scenario_management_tool_for_testers/appstate.dart';
-import 'package:scenario_management_tool_for_testers/screens/sign_out.dart';
+import 'package:scenario_management_tool_for_testers/Services/sign_out.dart';
 import 'package:scenario_management_tool_for_testers/viewmodel/dashviewmodel.dart';
 
+/// This class defines the main DashboardPage in the application, displaying user-specific
+/// data including scenarios, assignments, and test cases. The page provides search, view,
+/// add, and delete functionalities for scenarios and assignments.
 class DashboardPage extends StatelessWidget {
   const DashboardPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    /// StoreConnector widget connects to the Redux store to access and update app state.
     return StoreConnector<AppState, ViewModel>(
       onInit: (store) {
         store.dispatch(FetchAssignmentsAction());
@@ -36,12 +40,14 @@ class DashboardPage extends StatelessWidget {
               IconButton(
                 icon: const Icon(Icons.search),
                 onPressed: () {
+                  /// Calls the search function with the current input in the search bar.
                   vm.searchScenarios(searchController.text);
                 },
               ),
             ],
           ),
           drawer: Drawer(
+            ///for logged in user information anf logout.
             child: ListView(
               padding: EdgeInsets.zero,
               children: [
@@ -60,45 +66,6 @@ class DashboardPage extends StatelessWidget {
                         }),
                   ],
                 ),
-                ListTile(
-                  leading: IconButton(
-                      onPressed: () => _addAssignmentDialog(context, vm),
-                      icon: const Icon(Icons.add)),
-                  trailing: IconButton(
-                    onPressed: () {
-                      Navigator.pushNamed(context, Routes.assignedlist,
-                          arguments: {
-                            'assignments': vm.assignments,
-                            'designation': vm.designation,
-                            'roleColor': vm.roleColor,
-                          });
-                    },
-                    icon: const Icon(Icons.remove_red_eye),
-                  ),
-                  title: const Text("Assignment Management"),
-                  onTap: () => _addAssignmentDialog(context, vm),
-                ),
-                const Divider(),
-                ListTile(
-                  leading: IconButton(
-                      onPressed: () {
-                        _addCommentDialog(context, vm);
-                      },
-                      icon: Icon(Icons.add)),
-                  trailing: IconButton(
-                    onPressed: () {
-                      Navigator.pushNamed(context, Routes.commentlist,
-                          arguments: {
-                            'comments': vm.comments,
-                            'designation': vm.designation,
-                            'roleColor': vm.roleColor,
-                          });
-                    },
-                    icon: Icon(Icons.remove_red_eye),
-                  ),
-                  title: const Text("Comment Form"),
-                ),
-                const Divider(),
               ],
             ),
           ),
@@ -119,6 +86,7 @@ class DashboardPage extends StatelessWidget {
                         },
                       ),
                     ),
+                    // List of scenarios displayed in cards.
                     Expanded(
                         child: ListView.builder(
                       itemCount: vm.scenarios.length,
@@ -128,23 +96,22 @@ class DashboardPage extends StatelessWidget {
 
                         return Card(
                           child: ExpansionTile(
-                            title: Text(scenario['name'] ?? 'Unnamed Scenario'),
+                            title: Text(
+                                scenario['projectName'] ?? 'Unnamed Scenario'),
                             subtitle: Text(scenario['shortDescription'] ?? ''),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 IconButton(
                                   onPressed: () {
-                                    Navigator.push(
+                                    Navigator.pushNamed(
                                       context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            ScenarioDetailPage(
-                                          scenario: scenario,
-                                          roleColor: vm.roleColor,
-                                          designation: vm.designation ?? '',
-                                        ),
-                                      ),
+                                      Routes.scenariodetail,
+                                      arguments: {
+                                        'scenario': scenario,
+                                        'roleColor': vm.roleColor,
+                                        'designation': vm.designation ?? '',
+                                      },
                                     );
                                   },
                                   icon: Icon(Icons.remove_red_eye),
@@ -168,6 +135,7 @@ class DashboardPage extends StatelessWidget {
                                   ),
                               ],
                             ),
+                            // List of test cases for each scenario.
                             children: [
                               ...testCases.map<Widget>((testCase) {
                                 return ListTile(
@@ -212,6 +180,159 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
+  /// Displays a custom input dialog with a list of input fields, a title, and
+  /// an action button to submit the input.
+  Future<void> showInputDialog({
+    required BuildContext context,
+    required String title,
+    required List<Widget> children,
+    required Function() onSubmit,
+  }) {
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: children,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: onSubmit,
+              child: const Text("Submit"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Opens a dialog to add a new test case, allowing the user to specify
+  /// details like name, description, and tags.
+  void _addTestCaseDialog(
+      BuildContext context, String scenarioId, ViewModel vm) {
+    final nameController = TextEditingController();
+    final bugIdController = TextEditingController();
+    final commentsController = TextEditingController();
+    final descriptionController = TextEditingController();
+    final attachmentController = TextEditingController();
+    String? selectedTag;
+
+    final tagsOptions = vm.designation == 'Junior Tester'
+        ? ["Passed", "Failed", "In Review"]
+        : ["Passed", "Failed", "In Review", "Completed"];
+
+    showInputDialog(
+      context: context,
+      title: "Add Test Case",
+      children: [
+        TextFormField(
+            controller: bugIdController,
+            decoration: const InputDecoration(labelText: "Bug ID")),
+        TextFormField(
+            controller: nameController,
+            decoration: const InputDecoration(labelText: "Test Case Name")),
+        DropdownButtonFormField<String>(
+          value: selectedTag,
+          decoration: const InputDecoration(labelText: "Tags"),
+          items: tagsOptions
+              .map((tag) => DropdownMenuItem(value: tag, child: Text(tag)))
+              .toList(),
+          onChanged: (value) => selectedTag = value,
+        ),
+        TextFormField(
+            controller: commentsController,
+            decoration: const InputDecoration(labelText: "Comments")),
+        TextFormField(
+            controller: descriptionController,
+            decoration: const InputDecoration(labelText: "Description")),
+        TextFormField(
+            controller: attachmentController,
+            decoration: const InputDecoration(labelText: "Attachment")),
+      ],
+      onSubmit: () {
+        if (bugIdController.text.isNotEmpty &&
+            nameController.text.isNotEmpty &&
+            selectedTag != null) {
+          final testCase = {
+            'name': nameController.text,
+            'bugId': bugIdController.text,
+            'tags': selectedTag,
+            'comments': commentsController.text,
+            'description': descriptionController.text,
+            'attachment': attachmentController.text,
+            'scenarioId': scenarioId,
+            'createdAt': FieldValue.serverTimestamp(),
+          };
+          FirebaseFirestore.instance
+              .collection('scenarios')
+              .doc(scenarioId)
+              .collection('testCases')
+              .add(testCase)
+              .then((_) {
+            Navigator.of(context).pop();
+            vm.fetchScenarios();
+          }).catchError((e) {
+            ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text("Failed to add test case: $e")));
+          });
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Please fill in all fields")));
+        }
+      },
+    );
+  }
+
+  ///opens a dialog to delete a scenario only by lead tester
+  void _deleteScenarioDialog(BuildContext context, String docId) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Scenario'),
+          content: const Text('Are you sure you want to delete this scenario?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                try {
+                  await FirebaseFirestore.instance
+                      .collection('scenarios')
+                      .doc(docId)
+                      .delete();
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Scenario deleted successfully')),
+                  );
+                  StoreProvider.dispatch<AppState>(
+                      context, FetchScenariosAction());
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Failed to delete the scenario')),
+                  );
+                }
+              },
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  ///opena a dialog to add scenario . here lead tester and developer has acces to assign user through drop down.
+  ///junior tester can add scenario and view it.
   void _addScenarioDialog(BuildContext context, ViewModel vm) {
     final TextEditingController nameController = TextEditingController();
     final TextEditingController shortDescriptionController =
@@ -353,312 +474,6 @@ class DashboardPage extends StatelessWidget {
                 }
               },
               child: const Text("Add Scenario"),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _addTestCaseDialog(
-      BuildContext context, String scenarioId, ViewModel vm) {
-    final formKey = GlobalKey<FormState>();
-    final nameController = TextEditingController();
-    final bugIdController = TextEditingController();
-    final commentsController = TextEditingController();
-    final descriptionController = TextEditingController();
-    final attachmentController = TextEditingController();
-    final projectController = TextEditingController();
-    final shortDescriptionController = TextEditingController();
-    String? selectedTag;
-
-    final tagsOptions = vm.designation == 'Junior Tester'
-        ? ["Passed", "Failed", "In Review"]
-        : ["Passed", "Failed", "In Review", "Completed"];
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Add Test Case"),
-          content: SingleChildScrollView(
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: projectController,
-                    decoration:
-                        const InputDecoration(labelText: "Project Name"),
-                  ),
-                  TextFormField(
-                    controller: bugIdController,
-                    decoration: const InputDecoration(labelText: "Bug ID"),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return "Please enter a Bug ID";
-                      }
-                      return null;
-                    },
-                  ),
-                  TextFormField(
-                    controller: shortDescriptionController,
-                    decoration:
-                        const InputDecoration(labelText: "Short Description"),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return "Please enter a short description";
-                      }
-                      return null;
-                    },
-                  ),
-                  TextFormField(
-                    controller: nameController,
-                    decoration:
-                        const InputDecoration(labelText: "Test Case Name"),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return "Please enter a test case name";
-                      }
-                      return null;
-                    },
-                  ),
-                  DropdownButtonFormField<String>(
-                    value: selectedTag,
-                    decoration: const InputDecoration(labelText: "Tags"),
-                    items: tagsOptions.map((tag) {
-                      return DropdownMenuItem(value: tag, child: Text(tag));
-                    }).toList(),
-                    onChanged: (value) => selectedTag = value,
-                    validator: (value) {
-                      if (value == null) {
-                        return "Please select a tag";
-                      }
-                      return null;
-                    },
-                  ),
-                  TextFormField(
-                    controller: commentsController,
-                    decoration: const InputDecoration(labelText: "Comments"),
-                  ),
-                  TextFormField(
-                    controller: descriptionController,
-                    decoration: const InputDecoration(labelText: "Description"),
-                  ),
-                  TextFormField(
-                    controller: attachmentController,
-                    decoration: const InputDecoration(labelText: "Attachment"),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text("Cancel"),
-            ),
-            TextButton(
-              onPressed: () {
-                if (formKey.currentState?.validate() == true) {
-                  final testCase = {
-                    'name': nameController.text,
-                    'bugId': bugIdController.text,
-                    'tags': selectedTag,
-                    'comments': commentsController.text,
-                    'description': descriptionController.text,
-                    'attachment': attachmentController.text,
-                    'projectName': projectController.text,
-                    'shortDescription': shortDescriptionController.text,
-                    'scenarioId': scenarioId,
-                    'createdAt': FieldValue.serverTimestamp(),
-                  };
-
-                  FirebaseFirestore.instance
-                      .collection('scenarios')
-                      .doc(scenarioId)
-                      .collection('testCases')
-                      .add(testCase)
-                      .then((_) {
-                    Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text("Test case added successfully")),
-                    );
-                    vm.fetchScenarios();
-                  }).catchError((e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Failed to add test case: $e")),
-                    );
-                  });
-                }
-              },
-              child: const Text("Add"),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _addCommentDialog(BuildContext context, ViewModel vm) {
-    final TextEditingController contentController = TextEditingController();
-    final TextEditingController attachmentController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Add Comment"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: contentController,
-                decoration: const InputDecoration(labelText: "Content"),
-              ),
-              TextField(
-                controller: attachmentController,
-                decoration:
-                    const InputDecoration(labelText: "Attachment (Optional)"),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text("Cancel"),
-            ),
-            TextButton(
-              onPressed: () async {
-                String content = contentController.text;
-                String attachment = attachmentController.text;
-
-                if (content.isNotEmpty) {
-                  vm.addComment(
-                      content, attachment); // This now calls the correct action
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Comment added successfully")),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Content cannot be empty")),
-                  );
-                }
-              },
-              child: const Text("Add Comment"),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _addAssignmentDialog(BuildContext context, ViewModel vm) {
-    final TextEditingController bugIdController = TextEditingController();
-    final TextEditingController assignedUserController =
-        TextEditingController();
-    final String assignedBy =
-        FirebaseAuth.instance.currentUser?.email ?? 'Unknown';
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Add Assignment"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: bugIdController,
-                decoration: const InputDecoration(labelText: "Bug ID"),
-              ),
-              TextField(
-                controller: assignedUserController,
-                decoration: const InputDecoration(labelText: "Assigned User"),
-              ),
-              TextField(
-                decoration: const InputDecoration(labelText: "Assigned By"),
-                controller: TextEditingController(text: assignedBy),
-                enabled: false, // Make Assigned By read-only
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text("Cancel"),
-            ),
-            TextButton(
-              onPressed: () async {
-                final String bugId = bugIdController.text;
-                final String assignedUser = assignedUserController.text;
-
-                if (bugId.isNotEmpty && assignedUser.isNotEmpty) {
-                  try {
-                    await FirebaseFirestore.instance
-                        .collection('assignments')
-                        .add({
-                      'bugId': bugId,
-                      'assignedUser': assignedUser,
-                      'assignedBy': assignedBy,
-                      'createdAt': FieldValue.serverTimestamp(),
-                    });
-                    Navigator.of(context).pop();
-                    vm.fetchAssignments(); // Dispatch fetch action
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                        content: Text("Failed to add assignment")));
-                  }
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text("Please fill in all fields")));
-                }
-              },
-              child: const Text("Add Assignment"),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _deleteScenarioDialog(BuildContext context, String docId) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Delete Scenario'),
-          content: const Text('Are you sure you want to delete this scenario?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                try {
-                  await FirebaseFirestore.instance
-                      .collection('scenarios')
-                      .doc(docId)
-                      .delete();
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Scenario deleted successfully')),
-                  );
-                  StoreProvider.dispatch<AppState>(
-                      context, FetchScenariosAction());
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Failed to delete the scenario')),
-                  );
-                }
-              },
-              child: const Text('Delete'),
             ),
           ],
         );

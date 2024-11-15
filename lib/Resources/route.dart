@@ -7,8 +7,5 @@ class Routes {
   static const String commentlist = '/commentlist';
   static const String testcaselist = '/testcaselist';
   static const String scenariodetail = '/scenariodetail';
-
-  static const String commentdetail = '/commentdetail';
-  static const String assigneddetail = '/assigneddetail';
   static const String testdetail = '/testdetail';
 }

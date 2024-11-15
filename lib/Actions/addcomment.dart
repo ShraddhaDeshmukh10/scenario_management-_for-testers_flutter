@@ -38,17 +38,14 @@ class FetchCommentsAction extends ReduxAction<AppState> {
           await FirebaseFirestore.instance.collection('comments').get();
 
       final comments = snapshot.docs.map((doc) {
-        //print('Fetched Comment: ${doc.data()}'); // Debug print
         return {
           'docId': doc.id,
           'content': doc['content'] ?? 'No Content',
           'createdBy': doc['createdBy'] ?? 'Unknown',
           'attachment': doc['attachment'] ?? '',
-          'createdAt': doc['createdAt'],
+          'createdAt': (doc['createdAt'] as Timestamp?)?.toDate(),
         };
       }).toList();
-
-      //print('Total Comments Fetched: ${comments.length}'); // Debug print
 
       return state.copy(comments: comments);
     } catch (e) {

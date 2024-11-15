@@ -1,233 +1,169 @@
-import 'package:async_redux/async_redux.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:scenario_management_tool_for_testers/Actions/addcomment.dart';
-import 'package:scenario_management_tool_for_testers/Actions/fetchaction.dart';
-import 'package:scenario_management_tool_for_testers/Actions/fetchsenario.dart';
-import 'package:scenario_management_tool_for_testers/Resources/route.dart';
-import 'package:scenario_management_tool_for_testers/appstate.dart';
-import 'package:scenario_management_tool_for_testers/screens/sign_out.dart';
 import 'package:scenario_management_tool_for_testers/viewmodel/dashviewmodel.dart';
 
-class DashboardPage extends StatelessWidget {
-  const DashboardPage({Key? key}) : super(key: key);
+class ScenarioDetailPage extends StatelessWidget {
+  final Map<String, dynamic> scenario;
+  final Color roleColor;
+  final String designation;
 
-  @override
-  Widget build(BuildContext context) {
-    return StoreConnector<AppState, ViewModel>(
-      onInit: (store) {
-        store.dispatch(FetchAssignmentsAction());
-        store.dispatch(FetchScenariosAction());
-        store.dispatch(FetchCommentsAction());
-      },
-      vm: () => Factory(this),
-      builder: (context, vm) {
-        final TextEditingController searchController = TextEditingController();
+  ScenarioDetailPage({
+    required this.scenario,
+    required this.roleColor,
+    required this.designation,
+  });
 
-        return Scaffold(
-          appBar: AppBar(
-            title: Text("Welcome, ${vm.designation ?? 'User'}",
-                style:
-                    const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            backgroundColor: vm.roleColor,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.search),
-                onPressed: () {
-                  vm.searchScenarios(searchController.text);
-                },
-              ),
-            ],
+  Future<List<Map<String, dynamic>>> _fetchTestCases(String scenarioId) async {
+    try {
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('scenarios')
+          .doc(scenarioId)
+          .collection('testCases')
+          .get();
+
+      return snapshot.docs.map((doc) {
+        return {'docId': doc.id, ...?doc.data() as Map<String, dynamic>};
+      }).toList();
+    } catch (e) {
+      print("Error fetching test cases: $e");
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchChangeHistory(
+      String scenarioId) async {
+    try {
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('scenarios')
+          .doc(scenarioId)
+          .collection('changes')
+          .orderBy('timestamp', descending: true)
+          .limit(10)
+          .get();
+
+      return snapshot.docs.map((doc) {
+        return {'docId': doc.id, ...?doc.data() as Map<String, dynamic>};
+      }).toList();
+    } catch (e) {
+      print("Error fetching change history: $e");
+      return [];
+    }
+  }
+
+  Future<void> _deleteTestCase(String testCaseId) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('scenarios')
+          .doc(scenario['docId'])
+          .collection('testCases')
+          .doc(testCaseId)
+          .delete();
+    } catch (e) {
+      print("Failed to delete test case: $e");
+    }
+  }
+
+  Future<void> _saveChangeHistory(String scenarioId, String description) async {
+    final userEmail =
+        FirebaseAuth.instance.currentUser?.email ?? 'unknown_user';
+    try {
+      await FirebaseFirestore.instance
+          .collection('scenarios')
+          .doc(scenarioId)
+          .collection('changes')
+          .add({
+        'timestamp': FieldValue.serverTimestamp(),
+        'EditedBy': userEmail,
+        'description': description,
+      });
+    } catch (e) {
+      print("Error saving change history: $e");
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchComments(String scenarioId) async {
+    try {
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('scenarios')
+          .doc(scenarioId)
+          .collection('comments')
+          .orderBy('timestamp', descending: true)
+          .get();
+
+      return snapshot.docs.map((doc) {
+        return {'docId': doc.id, ...?doc.data() as Map<String, dynamic>};
+      }).toList();
+    } catch (e) {
+      print("Error fetching comments: $e");
+      return [];
+    }
+  }
+
+  void _addComment(BuildContext context, String scenarioId) {
+    final TextEditingController commentController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Add Comment"),
+          content: TextField(
+            controller: commentController,
+            decoration: const InputDecoration(labelText: "Enter your comment"),
           ),
-          drawer: Drawer(
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: [
-                UserAccountsDrawerHeader(
-                  accountName: Text("User: ${vm.designation ?? 'User'}"),
-                  accountEmail: Text(FirebaseAuth.instance.currentUser?.email ??
-                      'Not logged in'),
-                  currentAccountPicture:
-                      const CircleAvatar(child: Icon(Icons.person)),
-                  decoration: BoxDecoration(color: vm.roleColor),
-                  otherAccountsPictures: [
-                    IconButton(
-                        icon: const Icon(Icons.exit_to_app),
-                        onPressed: () {
-                          signOut(context);
-                        }),
-                  ],
-                ),
-                ListTile(
-                  leading: IconButton(
-                      onPressed: () => _addAssignmentDialog(context, vm),
-                      icon: const Icon(Icons.add)),
-                  trailing: IconButton(
-                    onPressed: () {
-                      Navigator.pushNamed(context, Routes.assignedlist,
-                          arguments: {
-                            'assignments': vm.assignments,
-                            'designation': vm.designation,
-                            'roleColor': vm.roleColor,
-                          });
-                    },
-                    icon: const Icon(Icons.remove_red_eye),
-                  ),
-                  title: const Text("Assignment Management"),
-                  onTap: () => _addAssignmentDialog(context, vm),
-                ),
-                const Divider(),
-                ListTile(
-                  leading: IconButton(
-                      onPressed: () {
-                        _addCommentDialog(context, vm);
-                      },
-                      icon: Icon(Icons.add)),
-                  trailing: IconButton(
-                    onPressed: () {
-                      Navigator.pushNamed(context, Routes.commentlist,
-                          arguments: {
-                            'comments': vm.comments,
-                            'designation': vm.designation,
-                            'roleColor': vm.roleColor,
-                          });
-                    },
-                    icon: Icon(Icons.remove_red_eye),
-                  ),
-                  title: const Text("Comment Form"),
-                ),
-                const Divider(),
-                ListTile(
-                  leading: IconButton(
-                      onPressed: () {
-                        _addTestCase(context, vm);
-                      },
-                      icon: Icon(Icons.add)),
-                  trailing: IconButton(
-                    onPressed: () {
-                      Navigator.pushNamed(context, Routes.testcaselist,
-                          arguments: {
-                            'designation': vm.designation,
-                            'roleColor': vm.roleColor,
-                          });
-                    },
-                    icon: Icon(Icons.remove_red_eye),
-                  ),
-                  title: const Text("Test Case Form"),
-                ),
-                Divider()
-              ],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text("Cancel"),
             ),
-          ),
-          body: vm.scenarios.isEmpty
-              ? const Center(child: CircularProgressIndicator())
-              : Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: TextField(
-                        controller: searchController,
-                        decoration: const InputDecoration(
-                          labelText: "Search by Project Name",
-                          border: OutlineInputBorder(),
-                        ),
-                        onSubmitted: (query) {
-                          vm.searchScenarios(query);
-                        },
-                      ),
-                    ),
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: vm.scenarios.length,
-                        itemBuilder: (context, index) {
-                          final scenario = vm.scenarios[index];
-                          return Card(
-                            child: ListTile(
-                              title:
-                                  Text(scenario['name'] ?? 'Unnamed Scenario'),
-                              subtitle:
-                                  Text(scenario['shortDescription'] ?? ''),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Checkbox(
-                                    value: scenario['checkboxState'] ?? false,
-                                    onChanged: vm.isCheckboxEnabled
-                                        ? (bool? value) {
-                                            vm.updateScenario(scenario['docId'],
-                                                {'checkboxState': value});
-                                          }
-                                        : null,
-                                  ),
-                                  if (vm.designation == 'Tester Lead')
-                                    IconButton(
-                                      onPressed: () {
-                                        _deleteScenarioDialog(
-                                            context, scenario['docId']);
-                                      },
-                                      icon: const Icon(Icons.delete),
-                                    ),
-                                  IconButton(
-                                    onPressed: () {
-                                      Navigator.pushNamed(
-                                        context,
-                                        Routes.scenariodetail,
-                                        arguments: {
-                                          'scenario': scenario,
-                                          'roleColor': vm.roleColor,
-                                        },
-                                      );
+            TextButton(
+              onPressed: () async {
+                final userEmail =
+                    FirebaseAuth.instance.currentUser?.email ?? 'unknown_user';
+                final commentText = commentController.text;
 
-                                      // Navigator.push(
-                                      //   context,
-                                      //   MaterialPageRoute(
-                                      //     builder:
-                                      //         (context) => ///////////////////
-                                      //             ScenarioDetailPage(
-                                      //       scenario: scenario,
-                                      //       roleColor: vm.roleColor,
-                                      //     ),
-                                      //   ),
-                                      // );
-                                    },
-                                    icon:
-                                        const Icon(Icons.remove_red_eye_sharp),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-          floatingActionButton: FloatingActionButton(
-            onPressed: () => _addScenarioDialog(context, vm),
-            child: const Icon(Icons.add),
-            tooltip: 'Add Scenario',
-          ),
+                if (commentText.isNotEmpty) {
+                  try {
+                    await FirebaseFirestore.instance
+                        .collection('scenarios')
+                        .doc(scenarioId)
+                        .collection('comments')
+                        .add({
+                      'text': commentText,
+                      'createdBy': userEmail,
+                      'timestamp': FieldValue.serverTimestamp(),
+                    });
+                    Navigator.of(context).pop();
+                  } catch (e) {
+                    print("Error adding comment: $e");
+                  }
+                }
+              },
+              child: const Text("Add"),
+            ),
+          ],
         );
       },
     );
   }
 
-  void _addTestCase(BuildContext context, ViewModel vm) {
-    final TextEditingController nameController = TextEditingController();
-    final TextEditingController bugIdController = TextEditingController();
-    final TextEditingController scenarioController = TextEditingController();
-    final TextEditingController commentsController = TextEditingController();
-    final TextEditingController descriptionController = TextEditingController();
-    final TextEditingController attachmentController = TextEditingController();
-    final TextEditingController projectController = TextEditingController();
+  void _editTestCase(BuildContext context, Map<String, dynamic> testCase) {
+    final TextEditingController nameController =
+        TextEditingController(text: testCase['name'] ?? '');
+    final TextEditingController bugIdController =
+        TextEditingController(text: testCase['bugId'] ?? '');
+    final TextEditingController projectNameController =
+        TextEditingController(text: testCase['projectName'] ?? '');
     final TextEditingController shortDescriptionController =
-        TextEditingController();
+        TextEditingController(text: testCase['shortDescription'] ?? '');
+    final TextEditingController descriptionController =
+        TextEditingController(text: testCase['description'] ?? '');
+    final TextEditingController commentsController =
+        TextEditingController(text: testCase['comments'] ?? '');
+    String? selectedTag;
 
-    String? _selectedTag; // Store the selected tag
-
-    // List of options for tags, filter out "Completed" for Junior Testers
-    final List<String> tagsOptions = vm.designation == 'Junior Tester'
+    final tagsOptions = designation == 'Junior Tester'
         ? ["Passed", "Failed", "In Review"]
         : ["Passed", "Failed", "In Review", "Completed"];
 
@@ -235,227 +171,92 @@ class DashboardPage extends StatelessWidget {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text("Add Test Case Form"),
+          title: const Text("Edit Test Case"),
           content: SingleChildScrollView(
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
-                    controller: projectController,
-                    decoration:
-                        const InputDecoration(labelText: "Project Name")),
-                TextField(
-                    controller: bugIdController,
-                    decoration: const InputDecoration(labelText: "Bug ID")),
-                TextField(
-                    controller: shortDescriptionController,
-                    decoration:
-                        const InputDecoration(labelText: "Short Description")),
-                TextField(
-                    controller: nameController,
-                    decoration:
-                        const InputDecoration(labelText: "Test Case Name")),
-                DropdownButtonFormField<String>(
-                  value: _selectedTag ??
-                      tagsOptions
-                          .first, // Ensure there is a valid initial value
-                  decoration: const InputDecoration(labelText: "Tags"),
-                  items: tagsOptions.map((String tag) {
-                    return DropdownMenuItem<String>(
-                      value: tag,
-                      child: Text(tag),
-                    );
-                  }).toList(),
-                  onChanged: (String? newValue) {
-                    // Update the selected tag when the user selects a new option
-                    _selectedTag = newValue;
-                  },
+                  controller: nameController,
+                  decoration:
+                      const InputDecoration(labelText: "Test Case Name"),
                 ),
                 TextField(
-                    controller: scenarioController,
-                    decoration: const InputDecoration(labelText: "Scenario")),
+                  controller: bugIdController,
+                  decoration: const InputDecoration(labelText: "Bug ID"),
+                ),
                 TextField(
-                    controller: commentsController,
-                    decoration: const InputDecoration(labelText: "Comments")),
+                  controller: projectNameController,
+                  decoration: const InputDecoration(labelText: "Project Name"),
+                ),
                 TextField(
-                    controller: descriptionController,
-                    decoration:
-                        const InputDecoration(labelText: "Description")),
+                  controller: shortDescriptionController,
+                  decoration:
+                      const InputDecoration(labelText: "Short Description"),
+                ),
                 TextField(
-                    controller: attachmentController,
-                    decoration: const InputDecoration(labelText: "Attachment")),
+                  controller: descriptionController,
+                  decoration: const InputDecoration(labelText: "Description"),
+                ),
+                TextField(
+                  controller: commentsController,
+                  decoration: const InputDecoration(labelText: "Comments"),
+                ),
+                DropdownButtonFormField<String>(
+                  value: selectedTag,
+                  decoration: const InputDecoration(labelText: "Tags"),
+                  items: tagsOptions
+                      .map((tag) =>
+                          DropdownMenuItem(value: tag, child: Text(tag)))
+                      .toList(),
+                  onChanged: (value) => selectedTag = value,
+                ),
               ],
             ),
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text("Cancel"),
-            ),
-            TextButton(
-              onPressed: () async {
-                String project = projectController.text;
-                String id = bugIdController.text;
-                String shortDescription = shortDescriptionController.text;
-                String name = nameController.text;
-                String scenario = scenarioController.text;
-                String comments = commentsController.text;
-                String description = descriptionController.text;
-                String attachment = attachmentController.text;
-
-                if (project.isNotEmpty &&
-                    id.isNotEmpty &&
-                    shortDescription.isNotEmpty &&
-                    name.isNotEmpty &&
-                    scenario.isNotEmpty &&
-                    comments.isNotEmpty &&
-                    description.isNotEmpty &&
-                    attachment.isNotEmpty &&
-                    _selectedTag != null) {
-                  try {
-                    // Pass the selected tag here
-                    vm.addtestcase(
-                      project,
-                      id,
-                      shortDescription,
-                      name,
-                      scenario,
-                      comments,
-                      description,
-                      attachment,
-                      _selectedTag,
-                    );
-                    Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text("Test case added successfully")));
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text("Failed to add test case: $e")));
-                  }
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Please fill in all fields")));
-                }
+              onPressed: () {
+                Navigator.of(context).pop();
               },
-              child: const Text("Add Test Case"),
-            )
-          ],
-        );
-      },
-    );
-  }
-
-  void _addCommentDialog(BuildContext context, ViewModel vm) {
-    final TextEditingController contentController = TextEditingController();
-    final TextEditingController attachmentController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Add Comment"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: contentController,
-                decoration: const InputDecoration(labelText: "Content"),
-              ),
-              TextField(
-                controller: attachmentController,
-                decoration:
-                    const InputDecoration(labelText: "Attachment (Optional)"),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
               child: const Text("Cancel"),
             ),
             TextButton(
               onPressed: () async {
-                String content = contentController.text;
-                String attachment = attachmentController.text;
+                final newName = nameController.text;
+                final newBugId = bugIdController.text;
+                final newProjectName = projectNameController.text;
+                final newShortDescription = shortDescriptionController.text;
+                final newDescription = descriptionController.text;
+                final newComments = commentsController.text;
+                final newTags = selectedTag;
 
-                if (content.isNotEmpty) {
-                  vm.addComment(
-                      content, attachment); // This now calls the correct action
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Comment added successfully")),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Content cannot be empty")),
-                  );
-                }
-              },
-              child: const Text("Add Comment"),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _addScenarioDialog(BuildContext context, ViewModel vm) {
-    final TextEditingController nameController = TextEditingController();
-    final TextEditingController shortDescriptionController =
-        TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Add Scenario"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: "Scenario Name"),
-              ),
-              TextField(
-                controller: shortDescriptionController,
-                decoration:
-                    const InputDecoration(labelText: "Short Description"),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text("Cancel"),
-            ),
-            TextButton(
-              onPressed: () async {
-                final String name = nameController.text;
-                final String shortDescription = shortDescriptionController.text;
-
-                if (name.isNotEmpty && shortDescription.isNotEmpty) {
+                if (newName.isNotEmpty) {
                   try {
                     await FirebaseFirestore.instance
                         .collection('scenarios')
-                        .add({
-                      'name': name,
-                      'shortDescription': shortDescription,
-                      'createdAt': FieldValue.serverTimestamp(),
+                        .doc(scenario['docId'])
+                        .collection('testCases')
+                        .doc(testCase['docId'])
+                        .update({
+                      'name': newName,
+                      'bugId': newBugId,
+                      'projectName': newProjectName,
+                      'shortDescription': newShortDescription,
+                      'description': newDescription,
+                      'comments': newComments,
+                      'tags': selectedTag,
+                      'updatedAt': FieldValue.serverTimestamp(),
                     });
+                    await _saveChangeHistory(scenario['docId'],
+                        "Updated test case ${testCase['docId']}");
                     Navigator.of(context).pop();
-                    vm.fetchScenarios(); // Dispatch fetch scenarios action
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Failed to add scenario")),
-                    );
+                        const SnackBar(content: Text("Failed to update")));
                   }
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Please fill in all fields")),
-                  );
                 }
               },
-              child: const Text("Add Scenario"),
+              child: const Text("Save"),
             ),
           ],
         );
@@ -463,113 +264,246 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
-  void _addAssignmentDialog(BuildContext context, ViewModel vm) {
-    final TextEditingController bugIdController = TextEditingController();
-    final TextEditingController assignedUserController =
-        TextEditingController();
-    final String assignedBy =
-        FirebaseAuth.instance.currentUser?.email ?? 'Unknown';
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Add Assignment"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(scenario['projectName'] ?? 'Scenario Detail'),
+        backgroundColor: roleColor,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TextField(
-                controller: bugIdController,
-                decoration: const InputDecoration(labelText: "Bug ID"),
+              TextButton(
+                onPressed: () => _addComment(context, scenario['docId']),
+                child: const Text("Add Comment"),
               ),
-              TextField(
-                controller: assignedUserController,
-                decoration: const InputDecoration(labelText: "Assigned User"),
+              Divider(),
+              Text(
+                "Comment List",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
               ),
-              TextField(
-                decoration: const InputDecoration(labelText: "Assigned By"),
-                controller: TextEditingController(text: assignedBy),
-                enabled: false, // Make Assigned By read-only
+              Divider(),
+              FutureBuilder<List<Map<String, dynamic>>>(
+                future: _fetchComments(scenario['docId']),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const Center(child: Text("No comments found"));
+                  }
+
+                  final comments = snapshot.data!;
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: comments.map((comment) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("Comment: ${comment['text'] ?? 'N/A'}"),
+                          Text("Created By: ${comment['createdBy'] ?? 'N/A'}"),
+                          Text(
+                              "Timestamp: ${(comment['timestamp'] as Timestamp).toDate()}"),
+                          Divider(),
+                        ],
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
+              Divider(),
+              FutureBuilder<List<Map<String, dynamic>>>(
+                future: _fetchTestCases(scenario['docId']),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const Center(child: Text("No test cases found"));
+                  }
+
+                  final testCases = snapshot.data!;
+
+                  return Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.vertical,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Scenario Details',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 20),
+                          ),
+                          Divider(),
+                          SizedBox(height: 8),
+                          Text(
+                              "Scenario ID: ${scenario['projectId'] ?? 'N/A'}"),
+                          Text("Scenario Name: ${scenario['name'] ?? 'N/A'}"),
+                          Text(
+                              "Description: ${scenario['shortDescription'] ?? 'N/A'}"),
+                          Text(
+                              "Assigned User: ${scenario['assignedToEmail'] ?? 'N/A'}"),
+                          Text(
+                              "Created At: ${scenario['createdAt'] != null ? (scenario['createdAt'] as Timestamp).toDate().toString() : 'N/A'}"),
+                          Text(
+                              "Created By: ${scenario['createdByEmail'] ?? 'N/A'}"),
+                          Divider(),
+                          if (designation != 'Junior Tester') ...[
+                            TextButton(
+                              child: const Text("Click to see change history"),
+                              onPressed: () async {
+                                final changes = await _fetchChangeHistory(
+                                    scenario['docId']);
+                                showDialog(
+                                  context: context,
+                                  builder: (context) {
+                                    return AlertDialog(
+                                      title: const Text("Change History"),
+                                      content: changes.isEmpty
+                                          ? const Text("No changes found.")
+                                          : SingleChildScrollView(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: changes.map((change) {
+                                                  return Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Text(
+                                                          "Scenario ID: ${scenario['projectId']}"),
+                                                      Text(
+                                                          "Project Name: ${scenario['projectName'] ?? 'N/A'}"),
+                                                      Text(
+                                                          "Edited By: ${change['EditedBy'] ?? 'Unknown'}"),
+                                                      Text(
+                                                          "Timestamp: ${(change['timestamp'] as Timestamp).toDate()}"),
+                                                      Divider(),
+                                                    ],
+                                                  );
+                                                }).toList(),
+                                              ),
+                                            ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.of(context).pop(),
+                                          child: const Text("Close"),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                          ],
+                          Divider(),
+                          Text(
+                            'Test Cases',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 20),
+                          ),
+                          Divider(),
+                          SizedBox(height: 8),
+                          if (testCases.isEmpty)
+                            const Text("No test cases found")
+                          else
+                            Column(
+                              children: testCases.map((testCase) {
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    SizedBox(height: 8),
+                                    Text(
+                                        "Test Case Name: ${testCase['name'] ?? 'N/A'}"),
+                                    Text(
+                                        "Bug ID: ${testCase['bugId'] ?? 'N/A'}"),
+                                    Text(
+                                        "Project Name: ${testCase['name'] ?? 'N/A'}"),
+                                    Text(
+                                        "Scenario ID: ${testCase['scenarioId'] ?? 'N/A'}"),
+                                    Text(
+                                        "Short Description: ${testCase['description'] ?? 'N/A'}"),
+                                    Text(
+                                        "Created At: ${testCase['createdAt'] ?? 'N/A'}"),
+                                    Text(
+                                        "Comments: ${testCase['comments'] ?? 'N/A'}"),
+                                    Text("Tags: ${testCase['tags'] ?? 'N/A'}"),
+                                    Row(
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(Icons.edit),
+                                          onPressed: () =>
+                                              _editTestCase(context, testCase),
+                                        ),
+                                        if (designation != 'Junior Tester')
+                                          IconButton(
+                                            icon: const Icon(Icons.delete),
+                                            onPressed: () async {
+                                              bool confirmDelete =
+                                                  await showDialog(
+                                                        context: context,
+                                                        builder: (context) {
+                                                          return AlertDialog(
+                                                            title: const Text(
+                                                                'Delete Test Case'),
+                                                            content: const Text(
+                                                                'Are you sure you want to delete this test case?'),
+                                                            actions: [
+                                                              TextButton(
+                                                                onPressed: () =>
+                                                                    Navigator.of(
+                                                                            context)
+                                                                        .pop(
+                                                                            false),
+                                                                child: const Text(
+                                                                    'Cancel'),
+                                                              ),
+                                                              TextButton(
+                                                                onPressed: () =>
+                                                                    Navigator.of(
+                                                                            context)
+                                                                        .pop(
+                                                                            true),
+                                                                child: const Text(
+                                                                    'Delete'),
+                                                              ),
+                                                            ],
+                                                          );
+                                                        },
+                                                      ) ??
+                                                      false;
+
+                                              if (confirmDelete) {
+                                                await _deleteTestCase(
+                                                    testCase['docId']);
+                                              }
+                                            },
+                                          ),
+                                      ],
+                                    ),
+                                    Divider(),
+                                  ],
+                                );
+                              }).toList(),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text("Cancel"),
-            ),
-            TextButton(
-              onPressed: () async {
-                final String bugId = bugIdController.text;
-                final String assignedUser = assignedUserController.text;
-
-                if (bugId.isNotEmpty && assignedUser.isNotEmpty) {
-                  try {
-                    await FirebaseFirestore.instance
-                        .collection('assignments')
-                        .add({
-                      'bugId': bugId,
-                      'assignedUser': assignedUser,
-                      'assignedBy': assignedBy,
-                      'createdAt': FieldValue.serverTimestamp(),
-                    });
-                    Navigator.of(context).pop();
-                    vm.fetchAssignments(); // Dispatch fetch action
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                        content: Text("Failed to add assignment")));
-                  }
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text("Please fill in all fields")));
-                }
-              },
-              child: const Text("Add Assignment"),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _deleteScenarioDialog(BuildContext context, String docId) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Delete Scenario'),
-          content: const Text('Are you sure you want to delete this scenario?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                try {
-                  await FirebaseFirestore.instance
-                      .collection('scenarios')
-                      .doc(docId)
-                      .delete();
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Scenario deleted successfully')),
-                  );
-                  StoreProvider.dispatch<AppState>(
-                      context, FetchScenariosAction());
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Failed to delete the scenario')),
-                  );
-                }
-              },
-              child: const Text('Delete'),
-            ),
-          ],
-        );
-      },
+        ),
+      ),
     );
   }
 }
