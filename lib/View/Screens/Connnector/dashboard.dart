@@ -6,7 +6,6 @@ import 'package:scenario_management_tool_for_testers/Actions/addcomment.dart';
 import 'package:scenario_management_tool_for_testers/Actions/fetchaction.dart';
 import 'package:scenario_management_tool_for_testers/Actions/fetchsenario.dart';
 import 'package:scenario_management_tool_for_testers/Resources/route.dart';
-import 'package:scenario_management_tool_for_testers/View/Screens/Connnector/scenariodetail.dart';
 import 'package:scenario_management_tool_for_testers/appstate.dart';
 import 'package:scenario_management_tool_for_testers/Services/sign_out.dart';
 import 'package:scenario_management_tool_for_testers/viewmodel/dashviewmodel.dart';
@@ -193,9 +192,11 @@ class DashboardPage extends StatelessWidget {
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text(title),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: children,
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: children,
+            ),
           ),
           actions: [
             TextButton(

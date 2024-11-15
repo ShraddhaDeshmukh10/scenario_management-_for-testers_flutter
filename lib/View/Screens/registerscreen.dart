@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:scenario_management_tool_for_testers/Actions/register_auth_action.dart';
 import 'package:scenario_management_tool_for_testers/appstate.dart';
@@ -19,22 +20,38 @@ class _RegisterPageState extends State<RegisterPage> {
       TextEditingController();
   bool passwordVisible = false;
   bool confirmPasswordVisible = false;
-  String?
-      _designation; // Make sure to set this initially to null so user must select a value
+  String? _designation;
   bool isLoading = false;
+
+  late StreamSubscription _storeSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _storeSubscription = store.onChange.listen((state) {
+      if (!mounted) return;
+      setState(() {
+        isLoading = false;
+      });
+
+      if (state.user != null) {
+        Navigator.pushReplacementNamed(context, Routes.dashboard);
+      }
+    });
+  }
 
   void _register() {
     if (_passwordController.text != _confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Passwords do not match")),
-      );
+      setState(() {
+        isLoading = false;
+      });
       return;
     }
 
     if (_designation == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select a designation")),
-      );
+      setState(() {
+        isLoading = false;
+      });
       return;
     }
 
@@ -46,28 +63,18 @@ class _RegisterPageState extends State<RegisterPage> {
       RegisterAction(
         email: _emailController.text,
         password: _passwordController.text,
-        designation: _designation!, // Use the selected designation
+        designation: _designation!,
       ),
     );
+  }
 
-    store.onChange.listen((state) {
-      setState(() {
-        isLoading = false;
-      });
-
-      if (state.user != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text("Account created successfully! Redirecting...")),
-        );
-        Navigator.pushReplacementNamed(context, Routes.dashboard);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text("Failed to create account. Please try again.")),
-        );
-      }
-    });
+  @override
+  void dispose() {
+    _storeSubscription.cancel();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -82,92 +89,104 @@ class _RegisterPageState extends State<RegisterPage> {
         }
 
         return Scaffold(
-          body: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (isLoading) const CircularProgressIndicator(),
-                const Text(
-                  "Register Your Account",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    labelText: 'Email',
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: _passwordController,
-                  obscureText: !passwordVisible,
-                  decoration: InputDecoration(
-                    border: const OutlineInputBorder(),
-                    labelText: 'Password',
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        passwordVisible
-                            ? Icons.visibility
-                            : Icons.visibility_off,
+          body: Stack(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      "Register Your Account",
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _emailController,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        labelText: 'Email',
                       ),
-                      onPressed: () {
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _passwordController,
+                      obscureText: !passwordVisible,
+                      decoration: InputDecoration(
+                        border: const OutlineInputBorder(),
+                        labelText: 'Password',
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            passwordVisible
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              passwordVisible = !passwordVisible;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _confirmPasswordController,
+                      obscureText: !confirmPasswordVisible,
+                      decoration: InputDecoration(
+                        border: const OutlineInputBorder(),
+                        labelText: 'Confirm Password',
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            confirmPasswordVisible
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              confirmPasswordVisible = !confirmPasswordVisible;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    DropdownButtonFormField<String>(
+                      value: _designation,
+                      hint: const Text('Select Designation'),
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                      ),
+                      items:
+                          <String>['Junior Tester', 'Tester Lead', 'Developer']
+                              .map((String value) => DropdownMenuItem(
+                                    value: value,
+                                    child: Text(value),
+                                  ))
+                              .toList(),
+                      onChanged: (String? newValue) {
                         setState(() {
-                          passwordVisible = !passwordVisible;
+                          _designation = newValue;
                         });
                       },
                     ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: _confirmPasswordController,
-                  obscureText: !confirmPasswordVisible,
-                  decoration: InputDecoration(
-                    border: const OutlineInputBorder(),
-                    labelText: 'Confirm Password',
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        confirmPasswordVisible
-                            ? Icons.visibility
-                            : Icons.visibility_off,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          confirmPasswordVisible = !confirmPasswordVisible;
-                        });
-                      },
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: isLoading ? null : _register,
+                      child: const Text('Register'),
                     ),
+                  ],
+                ),
+              ),
+              if (isLoading)
+                Container(
+                  color: Colors.black.withOpacity(0.5),
+                  child: const Center(
+                    child: CircularProgressIndicator(),
                   ),
                 ),
-                const SizedBox(height: 10),
-                DropdownButtonFormField<String>(
-                  value: _designation,
-                  hint: const Text('Select Designation'),
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                  ),
-                  items: <String>['Junior Tester', 'Tester Lead', 'Developer']
-                      .map((String value) => DropdownMenuItem(
-                            value: value,
-                            child: Text(value),
-                          ))
-                      .toList(),
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      _designation = newValue;
-                    });
-                  },
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: isLoading ? null : _register,
-                  child: const Text('Register'),
-                ),
-              ],
-            ),
+            ],
           ),
         );
       },
