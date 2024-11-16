@@ -73,124 +73,130 @@ class DashboardPage extends StatelessWidget {
               ],
             ),
           ),
-          body: Column(
-            children: [
-              // Dropdown for filtering
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: DropdownButtonFormField<String>(
-                  value: selectedFilter,
-                  decoration: const InputDecoration(
-                    labelText: "Filter by Project Type",
-                    border: OutlineInputBorder(),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 'OBA', child: Text('OBA')),
-                    DropdownMenuItem(
-                        value: 'HR Portal', child: Text('HR Portal')),
-                  ],
-                  onChanged: (value) {
-                    selectedFilter = value;
-                    vm.filterScenarios(value!);
-                  },
-                ),
-              ),
-
-              // Show "Not Found" message if no scenarios match the filter
-              if (vm.filteredScenarios.isEmpty)
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text(
-                      'No scenarios found',
-                      style: TextStyle(fontSize: 18, color: Colors.grey),
+          body: Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: BoxDecoration(
+                image: DecorationImage(image: AssetImage("assets/back03.jpg"))),
+            child: Column(
+              children: [
+                // Dropdown for filtering
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: DropdownButtonFormField<String>(
+                    value: selectedFilter,
+                    decoration: const InputDecoration(
+                      labelText: "Filter by Project Type",
+                      border: OutlineInputBorder(),
                     ),
-                  ),
-                )
-              else
-                // List of filtered scenarios
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: vm.filteredScenarios.length,
-                    itemBuilder: (context, index) {
-                      final scenario = vm.filteredScenarios[index];
-                      final testCases = scenario['testCases'] ?? [];
-
-                      return Card(
-                        child: ExpansionTile(
-                          title: Text(
-                              scenario['projectName'] ?? 'Unnamed Scenario'),
-                          subtitle: Text(scenario['shortDescription'] ?? ''),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                onPressed: () {
-                                  Navigator.pushNamed(
-                                    context,
-                                    Routes.scenariodetail,
-                                    arguments: {
-                                      'scenario': scenario,
-                                      'roleColor': vm.roleColor,
-                                      'designation': vm.designation ?? '',
-                                    },
-                                  );
-                                },
-                                icon: const Icon(Icons.remove_red_eye),
-                              ),
-                              Checkbox(
-                                value: scenario['checkboxState'] ?? false,
-                                onChanged: vm.isCheckboxEnabled
-                                    ? (bool? value) {
-                                        vm.updateScenario(scenario['docId'],
-                                            {'checkboxState': value});
-                                      }
-                                    : null,
-                              ),
-                              if (vm.designation == 'Tester Lead')
-                                IconButton(
-                                  onPressed: () {
-                                    _deleteScenarioDialog(
-                                        context, scenario['docId']);
-                                  },
-                                  icon: const Icon(Icons.delete),
-                                ),
-                            ],
-                          ),
-                          children: [
-                            ...testCases.map<Widget>((testCase) {
-                              return ListTile(
-                                title: Text(
-                                    testCase['name'] ?? 'Unnamed Test Case'),
-                                subtitle: Text(testCase['tags'] ?? ''),
-                                trailing: IconButton(
-                                  icon: const Icon(Icons.remove_red_eye),
-                                  onPressed: () {
-                                    Navigator.pushNamed(
-                                        context, Routes.testdetail,
-                                        arguments: {
-                                          'testCase': testCase,
-                                          'roleColor': vm.roleColor,
-                                        });
-                                  },
-                                ),
-                              );
-                            }).toList(),
-                            ListTile(
-                              leading: const Icon(Icons.add),
-                              title: const Text("Add Test Case"),
-                              onTap: () {
-                                _addTestCaseDialog(
-                                    context, scenario['docId'], vm);
-                              },
-                            ),
-                          ],
-                        ),
-                      );
+                    items: const [
+                      DropdownMenuItem(value: 'OBA', child: Text('OBA')),
+                      DropdownMenuItem(
+                          value: 'HR Portal', child: Text('HR Portal')),
+                    ],
+                    onChanged: (value) {
+                      selectedFilter = value;
+                      vm.filterScenarios(value!);
                     },
                   ),
                 ),
-            ],
+
+                // Show "Not Found" message if no scenarios match the filter
+                if (vm.filteredScenarios.isEmpty)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Text(
+                        'No scenarios found',
+                        style: TextStyle(fontSize: 18, color: Colors.grey),
+                      ),
+                    ),
+                  )
+                else
+                  // List of filtered scenarios
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: vm.filteredScenarios.length,
+                      itemBuilder: (context, index) {
+                        final scenario = vm.filteredScenarios[index];
+                        final testCases = scenario['testCases'] ?? [];
+
+                        return Card(
+                          child: ExpansionTile(
+                            title: Text(
+                                scenario['projectName'] ?? 'Unnamed Scenario'),
+                            subtitle: Text(scenario['shortDescription'] ?? ''),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  onPressed: () {
+                                    Navigator.pushNamed(
+                                      context,
+                                      Routes.scenariodetail,
+                                      arguments: {
+                                        'scenario': scenario,
+                                        'roleColor': vm.roleColor,
+                                        'designation': vm.designation ?? '',
+                                      },
+                                    );
+                                  },
+                                  icon: const Icon(Icons.remove_red_eye),
+                                ),
+                                Checkbox(
+                                  value: scenario['checkboxState'] ?? false,
+                                  onChanged: vm.isCheckboxEnabled
+                                      ? (bool? value) {
+                                          vm.updateScenario(scenario['docId'],
+                                              {'checkboxState': value});
+                                        }
+                                      : null,
+                                ),
+                                if (vm.designation == 'Tester Lead')
+                                  IconButton(
+                                    onPressed: () {
+                                      _deleteScenarioDialog(
+                                          context, scenario['docId']);
+                                    },
+                                    icon: const Icon(Icons.delete),
+                                  ),
+                              ],
+                            ),
+                            children: [
+                              ...testCases.map<Widget>((testCase) {
+                                return ListTile(
+                                  title: Text(
+                                      testCase['name'] ?? 'Unnamed Test Case'),
+                                  subtitle: Text(testCase['tags'] ?? ''),
+                                  trailing: IconButton(
+                                    icon: const Icon(Icons.remove_red_eye),
+                                    onPressed: () {
+                                      Navigator.pushNamed(
+                                          context, Routes.testdetail,
+                                          arguments: {
+                                            'testCase': testCase,
+                                            'roleColor': vm.roleColor,
+                                          });
+                                    },
+                                  ),
+                                );
+                              }).toList(),
+                              ListTile(
+                                leading: const Icon(Icons.add),
+                                title: const Text("Add Test Case"),
+                                onTap: () {
+                                  _addTestCaseDialog(
+                                      context, scenario['docId'], vm);
+                                },
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
           ),
           floatingActionButton: FloatingActionButton(
             onPressed: () => _addScenarioDialog(context, vm),
@@ -406,7 +412,6 @@ void _addScenarioDialog(BuildContext context, ViewModel vm) {
                       decoration:
                           const InputDecoration(labelText: "Short Description"),
                     ),
-                    // Replacing TextField with Dropdown for Project Name
                     DropdownButtonFormField<String>(
                       value: selectedProjectName,
                       items: const [
@@ -468,10 +473,14 @@ void _addScenarioDialog(BuildContext context, ViewModel vm) {
                   shortDescription.isNotEmpty &&
                   projectId.isNotEmpty &&
                   selectedProjectName != null &&
-                  selectedEmail != null) {
+                  (vm.designation == 'Junior Tester' ||
+                      selectedEmail != null)) {
                 try {
                   final user = FirebaseAuth.instance.currentUser;
                   final createdByEmail = user?.email ?? 'Unknown';
+                  final assignedEmail = vm.designation == 'Junior Tester'
+                      ? createdByEmail // Default to logged-in user's email
+                      : selectedEmail;
 
                   await FirebaseFirestore.instance.collection('scenarios').add({
                     'name': name,
@@ -481,9 +490,11 @@ void _addScenarioDialog(BuildContext context, ViewModel vm) {
                     'projectId': projectId,
                     'createdAt': FieldValue.serverTimestamp(),
                     'createdByEmail': createdByEmail,
-                    'assignedToEmail': selectedEmail,
+                    'assignedToEmail': assignedEmail,
                   });
-
+                  vm.fetchScenarios;
+                  vm.clearFilters();
+                  vm.filterScenarios;
                   Navigator.of(context).pop();
                   vm.fetchScenarios(); // Dispatch fetch scenarios action
                   vm.clearFilters();

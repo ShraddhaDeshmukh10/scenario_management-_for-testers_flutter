@@ -34,164 +34,218 @@ class ScenarioDetailPage extends StatelessWidget {
           ),
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                /// this option is only available to developer and lead tester to track the changes in scenario tastcases.
-                if (designation != 'Junior Tester') ...[
-                  // Change history button code
-                  TextButton(
-                    child: const Text("Click to see change history"),
-                    onPressed: () async {
-                      final changes =
-                          await _fetchChangeHistory(scenario['docId']);
-                      showDialog(
-                        context: context,
-                        builder: (context) {
-                          return AlertDialog(
-                            title: const Text("Change History"),
-                            content: changes.isEmpty
-                                ? const Text("No changes found.")
-                                : SingleChildScrollView(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: changes.map((change) {
-                                        return Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                                "Scenario ID: ${scenario['projectId']}"),
-                                            Text(
-                                                "Project Name: ${scenario['projectName'] ?? 'N/A'}"),
-                                            Text(
-                                                "Edited By: ${change['EditedBy'] ?? 'Unknown'}"),
-                                            Text(
-                                                "Timestamp: ${(change['timestamp'] as Timestamp).toDate()}"),
-                                            Divider(),
-                                          ],
-                                        );
-                                      }).toList(),
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                  image: DecorationImage(
+                      image: AssetImage("assets/backimage.jpg"))),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Text(
+                        'Scenario Details',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 20),
+                      ),
+
+                      /// this option is only available to developer and lead tester to track the changes in scenario tastcases.
+                      if (designation != 'Junior Tester') ...[
+                        // Change history button code
+                        TextButton(
+                          child: const Text("Click to see change history"),
+                          onPressed: () async {
+                            final changes =
+                                await _fetchChangeHistory(scenario['docId']);
+                            showDialog(
+                              context: context,
+                              builder: (context) {
+                                return AlertDialog(
+                                  title: const Text("Change History"),
+                                  content: changes.isEmpty
+                                      ? const Text("No changes found.")
+                                      : SingleChildScrollView(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: changes.map((change) {
+                                              return Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                      "Scenario ID: ${scenario['projectId']}"),
+                                                  Text(
+                                                      "Project Name: ${scenario['projectName'] ?? 'N/A'}"),
+                                                  Text(
+                                                      "Edited By: ${change['EditedBy'] ?? 'Unknown'}"),
+                                                  Text(
+                                                      "Timestamp: ${(change['timestamp'] as Timestamp).toDate()}"),
+                                                  Divider(),
+                                                ],
+                                              );
+                                            }).toList(),
+                                          ),
+                                        ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(),
+                                      child: const Text("Close"),
                                     ),
+                                  ],
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      ],
+                    ],
+                  ),
+                  const Divider(),
+                  SizedBox(height: 8),
+                  Card(
+                    child: Container(
+                        child: Column(
+                      children: [
+                        Text("Scenario ID: ${scenario['projectId'] ?? 'N/A'}",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                            )),
+                        Text("Scenario Name: ${scenario['name'] ?? 'N/A'}",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                            )),
+                        Text(
+                            "Description: ${scenario['shortDescription'] ?? 'N/A'}",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                            )),
+                        Text(
+                            "Assigned User: ${scenario['assignedToEmail'] ?? 'N/A'}",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                            )),
+                        Text(
+                            "Created At: ${scenario['createdAt'] != null ? (scenario['createdAt'] as Timestamp).toDate().toString() : 'N/A'}",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                            )),
+                        Text(
+                            "Created By: ${scenario['createdByEmail'] ?? 'N/A'}",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                            )),
+                      ],
+                    )),
+                  ),
+
+                  const Divider(),
+                  //  Test Cases...............
+                  const Text(
+                    'Test Cases',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                    ),
+                  ),
+                  const Divider(),
+                  if (testCases.isEmpty)
+                    const Text("No test cases found")
+                  else
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: testCases.length,
+                      itemBuilder: (context, index) {
+                        final testCase = testCases[index];
+                        return Card(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                  "Test Case Name: ${testCase['name'] ?? 'N/A'}"),
+                              Text("Bug ID: ${testCase['bugId'] ?? 'N/A'}"),
+                              Text(
+                                  "Scenario ID: ${testCase['scenarioId'] ?? 'N/A'}"),
+                              Text(
+                                  "Short Description: ${testCase['description'] ?? 'N/A'}"),
+                              Text(
+                                  "Created At: ${testCase['createdAt'] ?? 'N/A'}"),
+                              Text(
+                                  "Comments: ${testCase['comments'] ?? 'N/A'}"),
+                              Text("Tags: ${testCase['tags'] ?? 'N/A'}"),
+                              Row(
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit),
+                                    onPressed: () =>
+                                        _editTestCase(context, testCase),
                                   ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.of(context).pop(),
-                                child: const Text("Close"),
+                                  if (designation != 'Junior Tester')
+                                    IconButton(
+                                      icon: const Icon(Icons.delete),
+                                      onPressed: () => _deleteTestCase(
+                                          testCase['docId'], testCase),
+                                    ),
+                                ],
                               ),
                             ],
-                          );
+                          ),
+                        );
+                      },
+                    ),
+
+                  const Divider(),
+                  Row(
+                    children: [
+                      const Text(
+                        "Comment List",
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 20),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          _addComment(context, scenario['docId']);
                         },
+                        child: const Text("Add Comment"),
+                      ),
+                    ],
+                  ),
+                  const Divider(),
+                  FutureBuilder<List<Map<String, dynamic>>>(
+                    future: _fetchComments(scenario['docId']),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return const Center(child: Text("No comments found"));
+                      }
+
+                      final comments = snapshot.data!;
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: comments.map((comment) {
+                          return Card(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text("Comment: ${comment['text'] ?? 'N/A'}"),
+                                Text(
+                                    "Created By: ${comment['createdBy'] ?? 'N/A'}"),
+                                Text(
+                                    "Timestamp: ${(comment['timestamp'] as Timestamp).toDate()}"),
+                              ],
+                            ),
+                          );
+                        }).toList(),
                       );
                     },
                   ),
                 ],
-                Divider(),
-                TextButton(
-                  onPressed: () {
-                    _addComment(context, scenario['docId']);
-                  },
-                  child: const Text("Add Comment"),
-                ),
-                const Divider(),
-                const Text(
-                  "Comment List",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-                ),
-                const Divider(),
-                FutureBuilder<List<Map<String, dynamic>>>(
-                  future: _fetchComments(scenario['docId']),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                      return const Center(child: Text("No comments found"));
-                    }
-
-                    final comments = snapshot.data!;
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: comments.map((comment) {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text("Comment: ${comment['text'] ?? 'N/A'}"),
-                            Text(
-                                "Created By: ${comment['createdBy'] ?? 'N/A'}"),
-                            Text(
-                                "Timestamp: ${(comment['timestamp'] as Timestamp).toDate()}"),
-                            const Divider(),
-                          ],
-                        );
-                      }).toList(),
-                    );
-                  },
-                ),
-                const Divider(),
-                const Text(
-                  'Scenario Details',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-                ),
-                const Divider(),
-                SizedBox(height: 8),
-                Text("Scenario ID: ${scenario['projectId'] ?? 'N/A'}"),
-                Text("Scenario Name: ${scenario['name'] ?? 'N/A'}"),
-                Text("Description: ${scenario['shortDescription'] ?? 'N/A'}"),
-                Text("Assigned User: ${scenario['assignedToEmail'] ?? 'N/A'}"),
-                Text(
-                    "Created At: ${scenario['createdAt'] != null ? (scenario['createdAt'] as Timestamp).toDate().toString() : 'N/A'}"),
-                Text("Created By: ${scenario['createdByEmail'] ?? 'N/A'}"),
-                const Divider(),
-                //  Test Cases...............
-                const Text(
-                  'Test Cases',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-                ),
-                const Divider(),
-                if (testCases.isEmpty)
-                  const Text("No test cases found")
-                else
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: testCases.length,
-                    itemBuilder: (context, index) {
-                      final testCase = testCases[index];
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("Test Case Name: ${testCase['name'] ?? 'N/A'}"),
-                          Text("Bug ID: ${testCase['bugId'] ?? 'N/A'}"),
-                          Text(
-                              "Scenario ID: ${testCase['scenarioId'] ?? 'N/A'}"),
-                          Text(
-                              "Short Description: ${testCase['description'] ?? 'N/A'}"),
-                          Text("Created At: ${testCase['createdAt'] ?? 'N/A'}"),
-                          Text("Comments: ${testCase['comments'] ?? 'N/A'}"),
-                          Text("Tags: ${testCase['tags'] ?? 'N/A'}"),
-                          Row(
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.edit),
-                                onPressed: () =>
-                                    _editTestCase(context, testCase),
-                              ),
-                              if (designation != 'Junior Tester')
-                                IconButton(
-                                  icon: const Icon(Icons.delete),
-                                  onPressed: () => _deleteTestCase(
-                                      testCase['docId'], testCase),
-                                ),
-                            ],
-                          ),
-                          const Divider(),
-                        ],
-                      );
-                    },
-                  )
-              ],
+              ),
             ),
           ),
         );
