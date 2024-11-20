@@ -1,6 +1,7 @@
 import 'package:async_redux/async_redux.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:scenario_management_tool_for_testers/Services/response.dart';
 import 'package:scenario_management_tool_for_testers/appstate.dart';
 
 ///Queries the 'testCases' subcollection under a particular scenario document
@@ -83,7 +84,7 @@ class AddCommentAction extends ReduxAction<AppState> {
           'createdBy': userEmail,
           'timestamp': FieldValue.serverTimestamp(),
         });
-        return state; // Return state to trigger rebuild
+        return state.copy(response: DataResponse()); // ////added response
       } catch (e) {
         throw UserException("Error adding comment: $e");
       }

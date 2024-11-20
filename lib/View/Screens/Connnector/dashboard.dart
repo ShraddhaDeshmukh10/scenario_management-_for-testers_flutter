@@ -9,11 +9,11 @@ import 'package:scenario_management_tool_for_testers/Resources/route.dart';
 import 'package:scenario_management_tool_for_testers/appstate.dart';
 import 'package:scenario_management_tool_for_testers/Services/sign_out.dart';
 import 'package:scenario_management_tool_for_testers/viewmodel/dashviewmodel.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 /// This class defines the main DashboardPage in the application, displaying user-specific
 /// data including scenarios, assignments, and test cases. The page provides search, view,
 /// add, and delete functionalities for scenarios and assignments.
-
 class DashboardPage extends StatelessWidget {
   const DashboardPage({Key? key}) : super(key: key);
 
@@ -28,7 +28,6 @@ class DashboardPage extends StatelessWidget {
       vm: () => Factory(this),
       builder: (context, vm) {
         String? selectedFilter;
-
         return Scaffold(
           appBar: AppBar(
             title: Text(
@@ -38,10 +37,9 @@ class DashboardPage extends StatelessWidget {
             backgroundColor: vm.roleColor,
             actions: [
               IconButton(
-                  onPressed: () {
-                    vm.clearFilters();
-                  },
-                  icon: Icon(Icons.clear_all)),
+                onPressed: vm.clearFilters,
+                icon: Icon(Icons.clear_all),
+              ),
               if (selectedFilter != null)
                 IconButton(
                   icon: const Icon(Icons.clear),
@@ -73,132 +71,109 @@ class DashboardPage extends StatelessWidget {
               ],
             ),
           ),
-          body: Container(
-            width: double.infinity,
-            height: double.infinity,
-            decoration: BoxDecoration(
-                image: DecorationImage(image: AssetImage("assets/back03.jpg"))),
-            child: Column(
-              children: [
-                // Dropdown for filtering
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: DropdownButtonFormField<String>(
-                    value: selectedFilter,
-                    decoration: const InputDecoration(
-                      labelText: "Filter by Project Type",
-                      border: OutlineInputBorder(),
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: 'OBA', child: Text('OBA')),
-                      DropdownMenuItem(
-                          value: 'HR Portal', child: Text('HR Portal')),
-                    ],
-                    onChanged: (value) {
-                      selectedFilter = value;
-                      vm.filterScenarios(value!);
+          body: Column(
+            children: [
+              // Dropdown for filtering
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: SizedBox(
+                  width: MediaQuery.of(context).size.width * 0.7,
+                  child: StatefulBuilder(
+                    builder: (context, setState) {
+                      return DropdownButtonFormField<String>(
+                        value: selectedFilter,
+                        decoration: const InputDecoration(
+                          labelText: "Filter by Project Type",
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'OBA', child: Text('OBA')),
+                          DropdownMenuItem(
+                              value: 'HR Portal', child: Text('HR Portal')),
+                          DropdownMenuItem(value: 'All', child: Text('All')),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            selectedFilter = value;
+                            if (value == 'All') {
+                              selectedFilter =
+                                  null; // Clear the selected filter
+                              vm.clearFilters(); // Show all scenarios
+                            } else {
+                              vm.filterScenarios(
+                                  value!); // Apply specific filter
+                            }
+                          });
+                        },
+                      );
                     },
                   ),
                 ),
+              ),
 
-                // Show "Not Found" message if no scenarios match the filter
-                if (vm.filteredScenarios.isEmpty)
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: Text(
-                        'No scenarios found',
-                        style: TextStyle(fontSize: 18, color: Colors.grey),
-                      ),
+              // Show "Not Found" message if no scenarios match the filter
+              if (vm.filteredScenarios.isEmpty)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Text(
+                      'No scenarios found',
+                      style: TextStyle(fontSize: 18, color: Colors.grey),
                     ),
-                  )
-                else
-                  // List of filtered scenarios
-                  Expanded(
-                    child: ListView.builder(
+                  ),
+                )
+              else
+                // List of filtered scenarios
+                Expanded(
+                  child: ListView.builder(
                       itemCount: vm.filteredScenarios.length,
                       itemBuilder: (context, index) {
                         final scenario = vm.filteredScenarios[index];
-                        final testCases = scenario['testCases'] ?? [];
-
                         return Card(
-                          child: ExpansionTile(
+                          child: ListTile(
                             title: Text(
-                                scenario['projectName'] ?? 'Unnamed Scenario'),
+                              scenario['projectName'] ?? 'Unnamed Scenario',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 18),
+                            ),
+                            onTap: () {
+                              Navigator.pushNamed(
+                                context,
+                                Routes.scenariodetail,
+                                arguments: {
+                                  'scenario': scenario,
+                                  'roleColor': vm.roleColor,
+                                  'designation': vm.designation ?? '',
+                                },
+                              );
+                            },
                             subtitle: Text(scenario['shortDescription'] ?? ''),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
+                                ElevatedButton(
+                                    onPressed: () {
+                                      _addTestCaseDialog(
+                                          context, scenario['docId'], vm);
+                                    },
+                                    child: Text("Add Test Case")),
                                 IconButton(
-                                  onPressed: () {
-                                    Navigator.pushNamed(
-                                      context,
-                                      Routes.scenariodetail,
-                                      arguments: {
-                                        'scenario': scenario,
-                                        'roleColor': vm.roleColor,
-                                        'designation': vm.designation ?? '',
-                                      },
-                                    );
-                                  },
-                                  icon: const Icon(Icons.remove_red_eye),
-                                ),
-                                Checkbox(
-                                  value: scenario['checkboxState'] ?? false,
-                                  onChanged: vm.isCheckboxEnabled
-                                      ? (bool? value) {
-                                          vm.updateScenario(scenario['docId'],
-                                              {'checkboxState': value});
-                                        }
-                                      : null,
-                                ),
-                                if (vm.designation == 'Tester Lead')
-                                  IconButton(
                                     onPressed: () {
                                       _deleteScenarioDialog(
                                           context, scenario['docId']);
                                     },
-                                    icon: const Icon(Icons.delete),
-                                  ),
+                                    icon: Icon(Icons.delete))
                               ],
                             ),
-                            children: [
-                              ...testCases.map<Widget>((testCase) {
-                                return ListTile(
-                                  title: Text(
-                                      testCase['name'] ?? 'Unnamed Test Case'),
-                                  subtitle: Text(testCase['tags'] ?? ''),
-                                  trailing: IconButton(
-                                    icon: const Icon(Icons.remove_red_eye),
-                                    onPressed: () {
-                                      Navigator.pushNamed(
-                                          context, Routes.testdetail,
-                                          arguments: {
-                                            'testCase': testCase,
-                                            'roleColor': vm.roleColor,
-                                          });
-                                    },
-                                  ),
-                                );
-                              }).toList(),
-                              ListTile(
-                                leading: const Icon(Icons.add),
-                                title: const Text("Add Test Case"),
-                                onTap: () {
-                                  _addTestCaseDialog(
-                                      context, scenario['docId'], vm);
-                                },
-                              ),
-                            ],
                           ),
                         );
-                      },
-                    ),
-                  ),
-              ],
-            ),
+                      }),
+                ),
+            ],
           ),
           floatingActionButton: FloatingActionButton(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             onPressed: () => _addScenarioDialog(context, vm),
             child: const Icon(Icons.add),
             tooltip: 'Add Scenario',
@@ -245,11 +220,14 @@ Future<void> showInputDialog({
 
 /// Opens a dialog to add a new test case, allowing the user to specify
 /// details like name, description, and tags.
+
 void _addTestCaseDialog(BuildContext context, String scenarioId, ViewModel vm) {
   final nameController = TextEditingController();
   final bugIdController = TextEditingController();
   final commentsController = TextEditingController();
   final descriptionController = TextEditingController();
+  final String createdBy =
+      FirebaseAuth.instance.currentUser?.email ?? 'unknown_user';
   String? selectedTag;
 
   final tagsOptions = vm.designation == 'Junior Tester'
@@ -262,7 +240,7 @@ void _addTestCaseDialog(BuildContext context, String scenarioId, ViewModel vm) {
     children: [
       TextFormField(
           controller: bugIdController,
-          decoration: const InputDecoration(labelText: "Bug ID")),
+          decoration: const InputDecoration(labelText: "Test  Case ID")),
       TextFormField(
           controller: nameController,
           decoration: const InputDecoration(labelText: "Test Case Name")),
@@ -293,7 +271,9 @@ void _addTestCaseDialog(BuildContext context, String scenarioId, ViewModel vm) {
           'description': descriptionController.text,
           'scenarioId': scenarioId,
           'createdAt': FieldValue.serverTimestamp(),
+          'createdBy': createdBy,
         };
+
         FirebaseFirestore.instance
             .collection('scenarios')
             .doc(scenarioId)
@@ -307,8 +287,14 @@ void _addTestCaseDialog(BuildContext context, String scenarioId, ViewModel vm) {
               SnackBar(content: Text("Failed to add test case: $e")));
         });
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Please fill in all fields")));
+        Fluttertoast.showToast(
+          msg: "Please Fill all details!",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: Colors.black,
+          textColor: Colors.white,
+          fontSize: 16.0,
+        );
       }
     },
   );
@@ -335,16 +321,24 @@ void _deleteScenarioDialog(BuildContext context, String docId) {
                     .doc(docId)
                     .delete();
                 Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Scenario deleted successfully')),
+                Fluttertoast.showToast(
+                  msg: "Scenario added successfully!",
+                  toastLength: Toast.LENGTH_SHORT,
+                  gravity: ToastGravity.BOTTOM,
+                  backgroundColor: Colors.black,
+                  textColor: Colors.white,
+                  fontSize: 16.0,
                 );
                 StoreProvider.dispatch<AppState>(
                     context, FetchScenariosAction());
               } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Failed to delete the scenario')),
+                Fluttertoast.showToast(
+                  msg: "Failed to delete Scenario!",
+                  toastLength: Toast.LENGTH_SHORT,
+                  gravity: ToastGravity.BOTTOM,
+                  backgroundColor: Colors.black,
+                  textColor: Colors.white,
+                  fontSize: 16.0,
                 );
               }
             },
@@ -362,12 +356,10 @@ void _addScenarioDialog(BuildContext context, ViewModel vm) {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController shortDescriptionController =
       TextEditingController();
-  final TextEditingController projectIdController = TextEditingController();
 
-  String? selectedEmail; // Variable to store selected email
-  String? selectedProjectName; // Variable to store selected project name
+  String? selectedEmail;
+  String? selectedProjectName;
 
-  // Fetching user emails from Firestore
   Future<List<String>> fetchUserEmails() async {
     try {
       final snapshot =
@@ -375,7 +367,7 @@ void _addScenarioDialog(BuildContext context, ViewModel vm) {
       return snapshot.docs.map((doc) => doc['email'] as String).toList();
     } catch (e) {
       print("Error fetching user emails: $e");
-      return []; // Return empty list in case of error
+      return [];
     }
   }
 
@@ -390,7 +382,7 @@ void _addScenarioDialog(BuildContext context, ViewModel vm) {
               future: fetchUserEmails(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const CircularProgressIndicator();
+                  return const Center(child: CircularProgressIndicator());
                 }
 
                 if (snapshot.hasError) {
@@ -426,14 +418,6 @@ void _addScenarioDialog(BuildContext context, ViewModel vm) {
                       },
                       hint: const Text("Select Project Name"),
                     ),
-                    TextField(
-                      controller: projectIdController,
-                      decoration:
-                          const InputDecoration(labelText: "Project ID"),
-                    ),
-                    if (vm.designation == 'Junior Tester')
-                      const Text("Dropdown is accessible only for Lead Tester"),
-                    // Only show the dropdown for Lead Tester
                     if (vm.designation != 'Junior Tester')
                       DropdownButton<String>(
                         hint: const Text("Select User Email"),
@@ -466,12 +450,9 @@ void _addScenarioDialog(BuildContext context, ViewModel vm) {
             onPressed: () async {
               final String name = nameController.text;
               final String shortDescription = shortDescriptionController.text;
-              final String projectId = projectIdController.text;
 
-              // Ensure all fields are filled in and a project name is selected
               if (name.isNotEmpty &&
                   shortDescription.isNotEmpty &&
-                  projectId.isNotEmpty &&
                   selectedProjectName != null &&
                   (vm.designation == 'Junior Tester' ||
                       selectedEmail != null)) {
@@ -479,37 +460,41 @@ void _addScenarioDialog(BuildContext context, ViewModel vm) {
                   final user = FirebaseAuth.instance.currentUser;
                   final createdByEmail = user?.email ?? 'Unknown';
                   final assignedEmail = vm.designation == 'Junior Tester'
-                      ? createdByEmail // Default to logged-in user's email
+                      ? createdByEmail
                       : selectedEmail;
 
                   await FirebaseFirestore.instance.collection('scenarios').add({
                     'name': name,
                     'shortDescription': shortDescription,
-                    'projectName':
-                        selectedProjectName, // Storing selected project name
-                    'projectId': projectId,
+                    'projectName': selectedProjectName,
                     'createdAt': FieldValue.serverTimestamp(),
                     'createdByEmail': createdByEmail,
                     'assignedToEmail': assignedEmail,
                   });
-                  vm.fetchScenarios;
-                  vm.clearFilters();
-                  vm.filterScenarios;
                   Navigator.of(context).pop();
-                  vm.fetchScenarios(); // Dispatch fetch scenarios action
-                  vm.clearFilters();
+                  vm.fetchScenarios();
                 } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Failed to add scenario")),
+                  Fluttertoast.showToast(
+                    msg: "Failed to Add Scenario",
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    backgroundColor: Colors.black,
+                    textColor: Colors.white,
+                    fontSize: 16.0,
                   );
                 }
               } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Please fill in all fields")),
+                Fluttertoast.showToast(
+                  msg: "Fill in all required fields",
+                  toastLength: Toast.LENGTH_SHORT,
+                  gravity: ToastGravity.CENTER,
+                  backgroundColor: Colors.black,
+                  textColor: Colors.white,
+                  fontSize: 16.0,
                 );
               }
             },
-            child: const Text("Add Scenario"),
+            child: const Text("Add"),
           ),
         ],
       );

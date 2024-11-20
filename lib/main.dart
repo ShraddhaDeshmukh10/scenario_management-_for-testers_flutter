@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:scenario_management_tool_for_testers/Resources/route.dart';
+import 'package:scenario_management_tool_for_testers/Services/http_post.dart';
 import 'package:scenario_management_tool_for_testers/View/Screens/Connnector/dashboard.dart';
 import 'package:scenario_management_tool_for_testers/View/Screens/Connnector/scenariodetail.dart';
 import 'package:scenario_management_tool_for_testers/View/Screens/login.dart';
@@ -14,6 +15,7 @@ import 'firebase_options.dart';
 
 final store = Store<AppState>(initialState: AppState.initialState());
 Future<void> main() async {
+  setupServiceLocator();
   WidgetsFlutterBinding.ensureInitialized();
   await SharedPreferences.getInstance();
   await Firebase.initializeApp(

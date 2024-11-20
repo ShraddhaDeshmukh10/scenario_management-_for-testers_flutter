@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:scenario_management_tool_for_testers/Services/response.dart';
 
 class AppState {
   final User? user;
@@ -10,8 +11,10 @@ class AppState {
   final List<Map<String, dynamic>> testCases;
   final List<Map<String, dynamic>> changeHistory;
   final List<Map<String, dynamic>>? filteredScenarios;
+  final DataResponse? response;
 
   AppState({
+    this.response,
     this.user,
     this.filteredScenarios,
     this.designation,
@@ -24,6 +27,7 @@ class AppState {
   });
 
   AppState copy({
+    DataResponse? response,
     User? user,
     String? designation,
     List<Map<String, dynamic>>? filteredScenarios,
@@ -35,6 +39,7 @@ class AppState {
     List<Map<String, dynamic>>? comments,
   }) =>
       AppState(
+        response: response ?? this.response,
         user: user,
         designation: designation ?? this.designation,
         scenarios: scenarios ?? this.scenarios,
@@ -47,6 +52,7 @@ class AppState {
       );
 
   static AppState initialState() => AppState(
+        response: DataResponse(),
         user: null,
         designation: null,
         scenarios: [],
@@ -57,4 +63,11 @@ class AppState {
         testCases: [],
         addtestcase: [],
       );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || other is AppState && response == other.response;
+
+  @override
+  int get hashCode => response.hashCode;
 }

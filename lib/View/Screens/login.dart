@@ -36,10 +36,43 @@ class _LoginPageState extends State<LoginPage> {
   // Load login info from SharedPreferences
   Future<void> _loadLoginInfo() async {
     final prefs = await SharedPreferences.getInstance();
+    String? username = prefs.getString('username');
+    String? password = prefs.getString('password');
+
+    // If credentials are found, automatically redirect to the dashboard
+    if (username != null && password != null) {
+      setState(() {
+        _emailController.text = username;
+        _passwordController.text = password;
+      });
+
+      // Assuming you have a way to validate the login (e.g., check credentials with a backend)
+      _autoLogin(username, password);
+    }
+  }
+
+  // Automatically log in the user if valid credentials are found
+  Future<void> _autoLogin(String email, String password) async {
+    // Simulate a login validation (In reality, you'd validate with an API or backend)
     setState(() {
-      _emailController.text = prefs.getString('username') ?? '';
-      _passwordController.text = prefs.getString('password') ?? '';
+      isLoading = true;
     });
+
+    await Future.delayed(const Duration(seconds: 1)); // Simulate network call
+
+    // Dispatch login action and navigate to dashboard
+    store.dispatch(
+      LoginAction(
+        email: email,
+        password: password,
+      ),
+    );
+
+    setState(() {
+      isLoading = false;
+    });
+    Navigator.pushNamedAndRemoveUntil(
+        context, Routes.dashboard, (route) => false);
   }
 
   void _login() async {
@@ -71,7 +104,6 @@ class _LoginPageState extends State<LoginPage> {
     setState(() {
       isLoading = false;
     });
-
     Navigator.pushReplacementNamed(context, Routes.dashboard);
   }
 
@@ -80,9 +112,12 @@ class _LoginPageState extends State<LoginPage> {
     return StoreConnector<AppState, AppState>(
       converter: (store) => store.state,
       builder: (context, state) {
+        // Redirect to dashboard if user is already logged in
         if (state.user != null) {
           Future.delayed(Duration.zero, () {
-            Navigator.pushReplacementNamed(context, Routes.dashboard);
+            // Navigator.pushReplacementNamed(context, Routes.dashboard);
+            Navigator.pushNamedAndRemoveUntil(
+                context, Routes.dashboard, (route) => false);
           });
         }
 

@@ -1,9 +1,13 @@
 import 'package:async_redux/async_redux.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:scenario_management_tool_for_testers/Actions/add_image.dart';
 import 'package:scenario_management_tool_for_testers/Actions/add_test_action.dart';
 import 'package:scenario_management_tool_for_testers/Actions/addcomment.dart';
 import 'package:scenario_management_tool_for_testers/Actions/fetchaction.dart';
 import 'package:scenario_management_tool_for_testers/Actions/filteraction.dart';
+import 'package:scenario_management_tool_for_testers/Services/image_services.dart';
+import 'package:scenario_management_tool_for_testers/Services/response.dart';
 import 'package:scenario_management_tool_for_testers/View/Screens/Connnector/dashboard.dart';
 import 'package:scenario_management_tool_for_testers/appstate.dart';
 import 'package:scenario_management_tool_for_testers/Actions/fetchsenario.dart';
@@ -30,6 +34,8 @@ class ViewModel extends Vm {
   final void Function(String docId) deleteScenario;
   final List<Map<String, dynamic>> testCases;
   final List<Map<String, dynamic>> changeHistory;
+  final DataResponse? response;
+  final void Function(Uint8List fileBytes, String fileName) onUploadImage;
 
   final void Function(
       String project,
@@ -43,6 +49,8 @@ class ViewModel extends Vm {
       String? tag) addtestcase;
 
   ViewModel({
+    required this.response,
+    required this.onUploadImage,
     required this.addtestcase,
     required this.testCases,
     required this.changeHistory,
@@ -62,7 +70,7 @@ class ViewModel extends Vm {
     required this.fetchScenarios,
     required this.updateScenario,
     required this.searchScenarios,
-  }) : super(equals: [scenarios, comments, filteredScenarios]);
+  }) : super(equals: [scenarios, comments, filteredScenarios, response]);
 
   static ViewModel fromStore(Store<AppState> store) {
     String designation = store.state.designation ?? '';
@@ -80,6 +88,7 @@ class ViewModel extends Vm {
     }
 
     return ViewModel(
+      response: store.state.response,
       testCases: store.state.testCases,
       changeHistory: store.state.changeHistory,
       scenarios: store.state.scenarios,
@@ -90,6 +99,8 @@ class ViewModel extends Vm {
       clearFilters: () {
         store.dispatch(ClearFiltersAction());
       },
+      onUploadImage: (fileBytes, fileName) =>
+          store.dispatch(UploadImageAction(fileBytes, fileName)),
       assignments: store.state.assignments,
       designation: store.state.designation,
       addComment: (content, attachment) =>

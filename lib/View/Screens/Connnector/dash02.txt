@@ -7,8 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get_it/get_it.dart';
-import 'package:intl/intl.dart';
 import 'package:scenario_management_tool_for_testers/Actions/load_actions.dart';
+import 'package:scenario_management_tool_for_testers/Services/response.dart';
 import 'package:scenario_management_tool_for_testers/appstate.dart';
 import 'package:scenario_management_tool_for_testers/main.dart';
 import 'package:file_picker/file_picker.dart';
@@ -115,8 +115,7 @@ class ScenarioDetailPage extends StatelessWidget {
                                                 Text(
                                                     "Edited By: ${change['editedBy'] ?? 'Unknown'}"),
                                                 Text(
-                                                  "Timestamp: ${(change['timestamp'] != null ? DateFormat("dd-MM-yyyy. hh:mm a").format((change['timestamp'] as Timestamp).toDate()) : 'N/A')}",
-                                                ),
+                                                    "Timestamp: ${(change['timestamp'] as Timestamp).toDate()}"),
                                                 Text(
                                                     "Test Case ID: $testCaseId"), // Display testCaseId
                                                 Text("Tags: $tags",
@@ -164,7 +163,7 @@ class ScenarioDetailPage extends StatelessWidget {
                         style: TextStyle(color: Colors.blue),
                       ),
                       Text(
-                        "Created At: ${scenario['createdAt'] != null ? DateFormat("dd-MM-yyyy. hh:mm a").format((scenario['createdAt'] as Timestamp).toDate()) : 'N/A'}",
+                        "Created At: ${scenario['createdAt'] != null ? (scenario['createdAt'] as Timestamp).toDate().toString() : 'N/A'}",
                       ),
                       Text(
                         "Created By: ${scenario['createdByEmail'] ?? 'N/A'}",
@@ -187,19 +186,15 @@ class ScenarioDetailPage extends StatelessWidget {
                   const Text("No test cases found")
                 else
                   Container(
-                    height: 0.33 * h,
+                    //width: 0.4*w,
+                    height: 0.4 * h,
                     child: ListView.builder(
                       shrinkWrap: true,
                       scrollDirection: Axis.vertical,
+                      //physics: const NeverScrollableScrollPhysics(),
                       itemCount: testCases.length,
                       itemBuilder: (context, index) {
                         final testCase = testCases[index];
-                        final createdAt = testCase['createdAt'] as Timestamp?;
-                        final formattedDate = createdAt != null
-                            ? DateFormat("dd-MM-yyyy. hh:mm a")
-                                .format(createdAt.toDate())
-                            : 'N/A';
-
                         return Card(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -208,10 +203,9 @@ class ScenarioDetailPage extends StatelessWidget {
                                 children: [
                                   Text(
                                     "Test Case Name: ${testCase['name'] ?? 'N/A'}",
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18,
-                                    ),
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18),
                                   ),
                                   IconButton(
                                     color: Colors.blue,
@@ -231,18 +225,21 @@ class ScenarioDetailPage extends StatelessWidget {
                               Text(
                                   "Test Case ID: ${testCase['bugId'] ?? 'N/A'}"),
                               Text(
-                                  "Short Description: ${testCase['description'] ?? 'N/A'}"),
-                              Text("Created At: $formattedDate"),
+                                  "Scenario ID: ${testCase['scenarioId'] ?? 'N/A'}"),
                               Text(
-                                  "Created By: ${testCase['createdBy'] ?? 'N/A'}"),
+                                  "Short Description: ${testCase['description'] ?? 'N/A'}"),
+                              Text(
+                                "Created At: ${testCase['createdAt'] != null ? (testCase['createdAt'] as Timestamp).toDate().toString() : 'N/A'}",
+                              ),
+                              Text(
+                                "Created By: ${testCase['createdBy'] ?? 'N/A'}",
+                              ),
                               Text(
                                   "Comments: ${testCase['comments'] ?? 'N/A'}"),
                               Text(
-                                "Tags: ${testCase['tags']?.join(', ') ?? 'N/A'}",
-                                style: TextStyle(
-                                  color: _getTagColor(testCase['tags']),
-                                ),
-                              ),
+                                  "Tags: ${testCase['tags']?.join(', ') ?? 'N/A'}",
+                                  style: TextStyle(
+                                      color: _getTagColor(testCase['tags']))),
                             ],
                           ),
                         );
@@ -278,86 +275,40 @@ class ScenarioDetailPage extends StatelessWidget {
                     }
                     final comments = snapshot.data!;
                     return Container(
+                      //width: w * 0.1,
                       height: h * 0.2,
-                      child: ListView.builder(
-                        itemCount: comments.length,
-                        itemBuilder: (context, index) {
-                          final comment = comments[index];
-                          final imageUrl = comment['attachment'] as String?;
-                          final timestamp = comment['timestamp'] as Timestamp;
-                          final formattedDate =
-                              DateFormat("dd-MM-yyyy. hh:mm a")
-                                  .format(timestamp.toDate());
-                          return Card(
-                            child: ListTile(
-                              leading: GestureDetector(
-                                onTap: () {
-                                  if (imageUrl != null && imageUrl.isNotEmpty) {
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) {
-                                        return AlertDialog(
-                                          content: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Image.network(
-                                                imageUrl,
-                                                fit: BoxFit.contain,
-                                                errorBuilder: (context, error,
-                                                    stackTrace) {
-                                                  return const Text(
-                                                    "Failed to load image",
-                                                    style: TextStyle(
-                                                        color: Colors.red),
-                                                  );
-                                                },
-                                              ),
-                                              const SizedBox(height: 10),
-                                              TextButton(
-                                                onPressed: () =>
-                                                    Navigator.of(context).pop(),
-                                                child: const Text("Close"),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                      },
-                                    );
-                                  }
-                                },
-                                child: CircleAvatar(
-                                  backgroundImage:
-                                      imageUrl != null && imageUrl.isNotEmpty
-                                          ? NetworkImage(imageUrl)
-                                          : null,
-                                  backgroundColor: Colors.grey.shade300,
-                                  child: imageUrl == null || imageUrl.isEmpty
-                                      ? const Icon(Icons.person,
-                                          color: Colors.white)
-                                      : null,
-                                ),
-                              ),
-                              title: Text(
-                                comment['text'] ?? 'N/A',
-                                style: const TextStyle(
-                                    fontSize: 15, fontWeight: FontWeight.bold),
-                              ),
-                              subtitle: Column(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.vertical,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: comments.map((comment) {
+                            return Card(
+                              child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    comment['createdBy'] ?? 'N/A',
-                                    style: const TextStyle(fontSize: 13),
+                                  Padding(
+                                    padding: const EdgeInsets.only(
+                                        top: 0.1, left: 0.1),
+                                    child: Text(
+                                      "Comment: ${comment['text'] ?? 'N/A'}",
+                                      style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold),
+                                    ),
                                   ),
                                   Text(
-                                    formattedDate,
-                                    style: const TextStyle(fontSize: 10),
+                                    " ${comment['createdBy'] ?? 'N/A'}",
+                                    style: TextStyle(fontSize: 13),
+                                  ),
+                                  Text(
+                                    " ${(comment['timestamp'] as Timestamp).toDate()}",
+                                    style: TextStyle(fontSize: 10),
                                   ),
                                 ],
                               ),
-                            ),
-                          );
-                        },
+                            );
+                          }).toList(),
+                        ),
                       ),
                     );
                   },
@@ -401,50 +352,30 @@ class ScenarioDetailPage extends StatelessWidget {
           builder: (context, setState) {
             return AlertDialog(
               title: const Text("Add Comment"),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: commentController,
-                      decoration: const InputDecoration(
-                        labelText: "Enter your comment",
-                      ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: commentController,
+                    decoration:
+                        const InputDecoration(labelText: "Enter your comment"),
+                  ),
+                  const SizedBox(height: 10),
+                  ElevatedButton.icon(
+                    onPressed: () => _pickImage(context, (url) {
+                      setState(() {
+                        imageUrl = url;
+                      });
+                    }),
+                    icon: const Icon(Icons.upload),
+                    label: const Text("Upload Image"),
+                  ),
+                  if (imageUrl != null)
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text("Uploaded Image URL: $imageUrl"),
                     ),
-                    const SizedBox(height: 10),
-                    ElevatedButton.icon(
-                      onPressed: () => _pickImage(context, (url) {
-                        setState(() {
-                          imageUrl = url;
-                        });
-                      }),
-                      icon: const Icon(Icons.upload),
-                      label: const Text("Upload Image"),
-                    ),
-                    if (imageUrl != null) ...[
-                      const SizedBox(height: 10),
-                      Text("Uploaded Image URL: $imageUrl"),
-                      const SizedBox(height: 10),
-                      Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Image.network(
-                          imageUrl!,
-                          height: 150,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return const Text(
-                              'Failed to load image',
-                              style: TextStyle(color: Colors.red),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
+                ],
               ),
               actions: [
                 TextButton(
@@ -470,7 +401,6 @@ class ScenarioDetailPage extends StatelessWidget {
                             .doc(scenarioId)
                             .collection('comments')
                             .add(commentData);
-
                         Fluttertoast.showToast(
                           msg: "Comment added successfully!",
                           toastLength: Toast.LENGTH_SHORT,
